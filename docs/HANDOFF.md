@@ -5,6 +5,10 @@
 > 全部代码、修复、部署方式、踩坑与未竟事项都在这里 + 下方指向的文件里。
 > 仓库：https://github.com/Sanfasaki/Harness ｜ 本地源码：`/Sanfasaki/dsh-workspace`
 
+**最近更新（2026-09-02）**：默认模型已切 `deepseek-v4-flash-vision-exp` 并**已在本会话实测通过**
+（read_image 读图成功，会话与默认配置均为 vision-exp）；本文档为"当前唯一事实来源"，
+后续须随每次变更实时同步（见 §8 维护约定）。
+
 ---
 
 ## 0. 一句话现状
@@ -50,9 +54,12 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 ## 3. 模型与会话
 
 - `/root/.dsh/settings.yaml` → `agent-default-model.model = deepseek-v4-flash-vision-exp`
-  （新会话生效；**当前/旧会话模型固定不变**）。备份：`settings.yaml.bak-vision`。
+  （**已生效并经会话实测**：本会话经 UI 右下角下拉框切到 vision-exp，`read_image` 读图成功；
+  默认配置也已设为 vision-exp，新会话同样生效）。备份：`settings.yaml.bak-vision`。
 - 模型目录已内置 vision-exp（`dsh-llm-deepseek` 的 DEFAULT_MODELS，含 `image` 输入能力），
-  UI 模型选择器可直接选；价格与 v4-flash 相同（图 ≤384 token）。
+  UI 模型选择器（右下角下拉框）可直接选；价格与 v4-flash 相同（图 ≤384 token）。
+- **多模态已解锁**：对话附件通道不再被模型能力限制；图片类任务（看素材/校对/做光标图）可对话完成。
+  此前为绕行"不能传图"而做的 dsh-cursor **服务器图片上传仍保留、不冲突**（须保留：插件自身功能）。
 
 ## 4. 关键踩坑速查（接手必读，防重蹈覆辙）
 
@@ -89,10 +96,10 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 
 ## 6. 未竟事项 / 候选方向
 
-- [ ] 用 vision-exp 新会话实测多模态（发图给模型直接看），确认附件通道可用
+- [x] 用 vision-exp 实测多模态——**已完成**（本会话 read_image 读图成功，模型切换/默认均生效）
 - [ ] dsh-skin 的 persist 修复值得提**上游 PR**（wei-806206088/dsh-skin）
 - [ ] dsh-cursor 扩展：更多效果/预设/与 dsh-skin 面板合并的选项（待用户需求）
-- [ ] 模型切换后，图片类任务（光标素材制作等）可直接对话完成，文档可据此简化
+- [ ] 模型切换后图片类任务可对话完成，`docs/DEPLOY.md` 与仓库流程可据此再简化（可选）
 
 ## 7. 文档地图
 
@@ -109,3 +116,9 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 
 **接手第一步建议**：读 `docs/DEPLOY.md` + `skill/dsh-appearance-personalization-skill.md`，
 再 `curl 127.0.0.1:3080/` 确认插件在线，然后按 §6 未竟事项逐个推进。
+
+## 8. 维护约定
+
+- **本文档是事实来源**：任何改动（插件/配置/模型/踩坑/未竟事项）都要同步到这里，随 `git commit` 推送。
+- 若后续会话很长导致上下文溢出：新接手者先读本文档 + §7 文献地图，不要依赖旧对话记录。
+- 模型/会话现状以本文件 §3 与 `settings.yaml` 为准；不确定时可 `curl 127.0.0.1:3080/` 或用 read_image 自测。
