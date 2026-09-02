@@ -1,0 +1,29 @@
+{
+  "name": "@sanfasaki/dsh-hello-plugin",
+  "version": "0.1.0",
+  "description": "DSH 示例插件：加载时打一条问候日志",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "typescript": "^5.5.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  }
+}

@@ -1,0 +1,16 @@
+# 依赖与构建产物
+node_modules/
+lib/
+dist/
+*.tsbuildinfo
+*.log
+*.tmp
+.DS_Store
+.pnpm-store/
+
+# 部署备份
+*.bak
+*.dsh-deploy.bak
+
+# dsh-skin 上游克隆（不入库，vendor/ 即最终可用版）
+dsh-workspace/third-party/

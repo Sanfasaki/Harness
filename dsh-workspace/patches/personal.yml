@@ -1,0 +1,24 @@
+# 个性化覆盖层示例：用 `dsh web --patch 本文件` 启动预览。
+# 满意后再合并进 $DSH_HOME/profiles/web/cordis.patch.yml（或 home 级 $DSH_HOME/cordis.patch.yml）。
+#
+# 顶层是一个 YAML 数组，支持三类条目：
+#   - insert:     插入新行（id / name / config）
+#   - 带 id 条目: 覆盖该行**整个** config（不做字段级合并）
+#   - disabled:   禁用某行（可配 !!js 表达式按环境计算）
+
+# 示例 1：插入一个插件行（需要先把插件装进 profile）
+- insert:
+    - id: hello-plugin
+      name: '@sanfasaki/dsh-hello-plugin'
+      config:
+        greeting: '嗨，这是 --patch 预览'
+
+# 示例 2：覆盖已有行的 config（整体替换，不是合并）
+- id: session-title
+  config:
+    maxTitleBytes: 200
+    fallbackMaxWords: 5
+
+# 示例 3：禁用某行（取消注释生效）
+# - id: hmr
+#   disabled: true

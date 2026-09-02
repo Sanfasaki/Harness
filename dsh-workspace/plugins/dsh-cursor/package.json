@@ -1,0 +1,22 @@
+{
+  "name": "dsh-cursor",
+  "version": "0.1.0",
+  "description": "DSH 光标美化插件：自定义光标 + 光环 / 粒子拖尾特效（纯客户端）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT"
+}

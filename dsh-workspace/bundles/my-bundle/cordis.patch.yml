@@ -1,0 +1,12 @@
+# 示例 bundle patch：把 hello-plugin 与一条 session-title 覆盖打包成一层。
+# 作为 bundle 层时，这里的内容会先于 profile 的 cordis.patch.yml 应用，
+# 之后 profile / home / --patch 层的同 id 写入会覆盖本层。
+- insert:
+    - id: hello-plugin
+      name: '@sanfasaki/dsh-hello-plugin'
+      config:
+        greeting: '来自 my-bundle 的问候'
+
+- id: session-title
+  config:
+    maxTitleBytes: 200

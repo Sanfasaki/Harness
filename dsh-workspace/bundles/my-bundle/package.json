@@ -1,0 +1,12 @@
+{
+  "name": "@sanfasaki/my-bundle",
+  "version": "0.1.0",
+  "description": "示例组合包：把一组插件与配置覆盖组装成一个可挂载的 bundle 层",
+  "type": "module",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}
