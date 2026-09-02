@@ -1,12 +1,17 @@
 # 依赖与构建产物
 node_modules/
-lib/
 dist/
 *.tsbuildinfo
 *.log
 *.tmp
 .DS_Store
 .pnpm-store/
+
+# 插件构建产物目录 lib/ —— 但 vendor/ 与 workspace 插件源码里的 lib/ 必须入库
+lib/
+!vendor/dsh-skin/lib/
+!vendor/dsh-cursor/lib/
+!dsh-workspace/plugins/dsh-cursor/lib/
 
 # 部署备份
 *.bak
