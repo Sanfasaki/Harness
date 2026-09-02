@@ -18,6 +18,7 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 | 目录 | 说明 |
 |---|---|
 | [docs/DEPLOY.md](./docs/DEPLOY.md) | **部署指南：别人照读即可复刻全套**（一键/手动/验收/FAQ） |
+| [docs/HANDOFF.md](./docs/HANDOFF.md) | **交接文档：让没有上下文的模型/人直接接手本项目**（环境/踩坑/调试/未竟事项） |
 | `install.sh` | 一键部署脚本（幂等、带备份） |
 | `vendor/dsh-skin/` | 主题皮肤插件：极简浅/深、主色/文字色、图片/GIF/视频换肤、命名预设、**自动切换 + 三段式平滑过渡**（含本地修复最终版） |
 | `vendor/dsh-cursor/` | 光标插件：图片光标（上传/URL、自动裁透明边、自适应描边）+ 鼠标拖尾 + 点击波纹 |
