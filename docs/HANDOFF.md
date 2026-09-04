@@ -59,10 +59,15 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 
 ### dsh-cursor（insert 行 `dsh-cursor`）
 - 图片光标：上传（服务器存储）/URL/内置默认；悬停放大、离窗隐藏、输入框保留 I-beam、
-  **自适应描边**（浅色深影/深色浅辉，MutationObserver 实时）
+  **自适应描边 + 描边强度**（浅色深影／深色双白辉光，强度×s，MutationObserver 实时）
 - 拖尾 + 点击波纹：时间驱动（createdAt+duration+easeOutCubic），16ms 节流、上限 12、过期销毁
+- **命名预设**：整套参数存为命名预设，列表应用/删除；存服务器端（跨会话）
+- **关联主题**（默认关）：切到某主题(dsh-skin)→点预设"关联"绑定主题名；dsh-skin 广播当前主题
+  （`data-dsh-active-skin` 属性 + `dsh-skin-preset` 事件），dsh-cursor 切主题时自动应用关联光标。
+  已预置映射：`芙莉莲魔杖↔fulilian`、`罗小黑光标↔lxhzj`、`紫罗兰光标↔Violet`
 - 宿主路由 `/api/dsh-cursor-image`：POST（base64 JSON→存 `$DSH_HOME` 根 `dsh-cursor-images-*.b64`，
   fs 服务无二进制写能力故存 base64 文本）；GET 按**魔数嗅探** MIME（扩展名不可信）
+- 宿主路由 `/api/dsh-cursor-state`：配置服务器端持久化（与 dsh-skin 一致；localStorage 不可靠）
 
 ## 3. 模型与会话
 

@@ -295,6 +295,14 @@ window.__ModuleLoader__.load({
       // 自动切换主题：跨渲染稳定的引用（timer 回调与 apply 作用域共享）
       var cfgRef = { current: null };
       var autoApplyRef = { current: false };
+      // 广播当前生效的主题预设名（DOM 属性 + 页面内事件），供 dsh-cursor 等关联插件使用
+      function setActiveSkinPreset(name) {
+        try {
+          var root = document.documentElement;
+          if (root) root.setAttribute("data-dsh-active-skin", name);
+          window.dispatchEvent(new CustomEvent("dsh-skin-preset", { detail: name }));
+        } catch (e) {}
+      }
       // 主题切换过渡：全局颜色渐变动画 + 遮罩三段式。
       // 状态机：常规 →(遮罩 0→1, 0.75s)→ 无（遮罩不透明，此刻切主题，新壁纸被遮住
       // 保持不可见）→(遮罩 1→0, 0.75s)→ 常规。
@@ -530,6 +538,7 @@ window.__ModuleLoader__.load({
             idx = (idx + 1) % list.length; // 匹配失败 idx=-1 → 0
             var entry = list[idx];
             if (!entry || !entry.name) return;
+            setActiveSkinPreset(entry.name); // 自动切换也广播主题名
             var s = entry.skin || {};
             var oldWp = (cur.images && cur.images.wallpaper) ? cur.images.wallpaper : null;
             var newWp = (s.images && s.images.wallpaper) ? s.images.wallpaper : null;
@@ -651,6 +660,8 @@ window.__ModuleLoader__.load({
           setErr(null);
         }
         function applyPreset(name) {
+          // 广播当前生效的主题预设名：dsh-cursor 等关联插件据此自动切换
+          setActiveSkinPreset(name);
           var cur = cfgRef.current;
           var oldWp = (cur.images && cur.images.wallpaper) ? cur.images.wallpaper : null;
           var newWp = null;

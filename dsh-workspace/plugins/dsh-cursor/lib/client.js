@@ -22,26 +22,11 @@ window.__ModuleLoader__.load({
       '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="7" fill="#4176e6"/><circle cx="16" cy="16" r="11" fill="none" stroke="#4176e6" stroke-opacity="0.35" stroke-width="2.5"/></svg>'
     );
     var DEFAULT_STATE = {
-      enabled: true,
-      imageUrl: "/api/dsh-cursor-image/dsh-cursor-images-1788329738231-npe5jm.jpg.b64",
-      size: 40, scale: 1.7, stroke: true, strokeStrength: 1,
-      trailOn: true, trailColor: "#d2f5f0", trailSize: 17, trailDuration: 850,
-      rippleOn: true, rippleColor: "#d2f5f0", rippleMaxSize: 130, rippleDuration: 950, rippleBorderWidth: 2,
-      linkOn: false,
-      presets: [
-        {
-          name: "芙莉莲魔杖",
-          enabled: true,
-          imageUrl: "/api/dsh-cursor-image/dsh-cursor-images-1788329738231-npe5jm.jpg.b64",
-          size: 40, scale: 1.7, stroke: true, strokeStrength: 1,
-          trailOn: true, trailColor: "#d2f5f0", trailSize: 17, trailDuration: 850,
-          rippleOn: true, rippleColor: "#d2f5f0", rippleMaxSize: 130, rippleDuration: 950, rippleBorderWidth: 2,
-          linkTheme: "fulilian"
-        }
-      ]
+      enabled: false, imageUrl: "", size: 64, scale: 1.5, stroke: false,
+      trailOn: false, trailColor: "#4176e6", trailSize: 16, trailDuration: 800,
+      rippleOn: false, rippleColor: "#4176e6", rippleMaxSize: 120,
+      rippleDuration: 1000, rippleBorderWidth: 2
     };
-    // 可随预设保存/应用的全部参数键（linkTheme 是预设级属性，不在此列）
-    var PARAM_KEYS = ["enabled", "imageUrl", "size", "scale", "stroke", "strokeStrength", "trailOn", "trailColor", "trailSize", "trailDuration", "rippleOn", "rippleColor", "rippleMaxSize", "rippleDuration", "rippleBorderWidth"];
     var MAX_TRAIL = 12;
     var MAX_RIPPLE = 12;
     var TRAIL_THROTTLE = 16; // ms
@@ -56,32 +41,8 @@ window.__ModuleLoader__.load({
       } catch (e) {}
       return Object.assign({}, DEFAULT_STATE);
     }
-    // 持久化：写 localStorage（兜底）+ 服务器端状态路由（防抖 + 串行，与 dsh-skin 一致）
-    // localStorage 在部分浏览器/https 环境下不可靠，服务器端为准。
-    var saveChain = Promise.resolve();
-    var saveTimer = null;
-    var pendingState = null;
-    var notifySaved = null; // 由 apply() 注入，用于显示"已保存/保存失败"
     function saveState(s) {
       try { localStorage.setItem(STORE_KEY, JSON.stringify(s)); } catch (e) {}
-      pendingState = s;
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(function () {
-        var body = JSON.stringify(pendingState);
-        saveChain = saveChain.then(function () {
-          return fetch("/api/dsh-cursor-state", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: body
-          });
-        }).then(function (r) {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          if (notifySaved) notifySaved(true);
-        }).catch(function (e) {
-          console.error("dsh-cursor save failed", e);
-          if (notifySaved) notifySaved(false);
-        });
-      }, 250);
     }
 
     var CURSOR_CSS =
@@ -101,121 +62,14 @@ window.__ModuleLoader__.load({
       var themeObserver = null;
       var open = false;
       var errMsg = null;
-      var savedHint = null;
-      var savedHintTimer = null;
-      var hydrated = false; // 已从服务器加载完配置（加载前不写盘，避免用默认值覆盖存档）
-      var presetName = "";
-      var skinObserver = null;
-      // 关联：读取 dsh-skin 广播的当前主题名，若某光标预设关联了它则自动应用
-      function activeSkinPreset() {
-        return (typeof document !== "undefined" && document.documentElement) ? (document.documentElement.getAttribute("data-dsh-active-skin") || "") : "";
-      }
-      function applyLinkedCursor() {
-        if (!state.linkOn) return;
-        var skin = activeSkinPreset();
-        if (!skin) return;
-        for (var i = 0; i < state.presets.length; i++) {
-          var p = state.presets[i];
-          if (p.linkTheme && p.linkTheme === skin) { applyPreset(p.name); return; }
-        }
-      }
-      function linkPresetToCurrent(name) {
-        var skin = activeSkinPreset();
-        for (var i = 0; i < state.presets.length; i++) {
-          if (state.presets[i].name === name) {
-            if (!skin) { errMsg = "请先切到一个主题（dsh-skin）再点关联"; renderPanel(); return; }
-            state.presets[i].linkTheme = skin;
-            errMsg = null;
-            applyState();
-            return;
-          }
-        }
-      }
-      function onSkinPreset() { applyLinkedCursor(); }
-      function presetMatches(p) {
-        for (var i = 0; i < PARAM_KEYS.length; i++) {
-          var k = PARAM_KEYS[i];
-          if ((p[k] !== undefined) && String(p[k]) !== String(state[k])) return false;
-        }
-        return true;
-      }
-      function savePreset() {
-        var name = presetName.trim();
-        if (!name) { errMsg = "请输入预设名称"; return; }
-        var entry = { name: name };
-        for (var i = 0; i < PARAM_KEYS.length; i++) entry[PARAM_KEYS[i]] = state[PARAM_KEYS[i]];
-        var ps = state.presets.slice();
-        var idx = -1;
-        for (var j = 0; j < ps.length; j++) if (ps[j].name === name) { idx = j; break; }
-        if (idx >= 0) { entry.linkTheme = ps[idx].linkTheme || ""; ps[idx] = entry; }
-        else ps.push(entry);
-        state.presets = ps;
-        presetName = "";
-        errMsg = null;
-        applyState();
-      }
-      function applyPreset(name) {
-        var p = null;
-        for (var j = 0; j < state.presets.length; j++) if (state.presets[j].name === name) { p = state.presets[j]; break; }
-        if (!p) return;
-        for (var i = 0; i < PARAM_KEYS.length; i++) {
-          var k = PARAM_KEYS[i];
-          if (p[k] !== undefined) state[k] = p[k];
-        }
-        applyState();
-      }
-      function deletePreset(name) {
-        state.presets = state.presets.filter(function (p) { return p.name !== name; });
-        applyState();
-      }
-      function presetRow(p) {
-        var row = document.createElement("div");
-        row.className = "dsh-cursor-row";
-        row.style.cssText = "justify-content:space-between;";
-        var nm = document.createElement("span");
-        nm.className = "dsh-cursor-label";
-        nm.style.cssText = "text-transform:none;letter-spacing:0;margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
-        nm.textContent = p.name + (presetMatches(p) ? "（当前）" : "");
-        row.appendChild(nm);
-        var ap = document.createElement("button");
-        ap.className = "dsh-cursor-chip";
-        ap.style.flex = "0 0 auto";
-        ap.textContent = "应用";
-        ap.addEventListener("click", function () { applyPreset(p.name); });
-        var lk = document.createElement("button");
-        lk.className = "dsh-cursor-chip";
-        lk.style.flex = "0 0 auto";
-        lk.textContent = p.linkTheme ? ("关联:" + p.linkTheme) : "关联";
-        lk.title = "把本预设关联到当前主题（切进该主题自动用此光标）";
-        lk.addEventListener("click", function () { linkPresetToCurrent(p.name); });
-        var del = document.createElement("button");
-        del.className = "dsh-cursor-chip";
-        del.style.flex = "0 0 auto";
-        del.textContent = "删除";
-        del.addEventListener("click", function () { deletePreset(p.name); });
-        row.appendChild(ap);
-        row.appendChild(lk);
-        row.appendChild(del);
-        return row;
-      }
-      function notifySaved(ok) {
-        if (!savedHint) return;
-        savedHint.textContent = ok ? "✓ 已保存" : "保存失败";
-        savedHint.style.opacity = "1";
-        if (savedHintTimer) clearTimeout(savedHintTimer);
-        savedHintTimer = setTimeout(function () { savedHint.style.opacity = "0"; }, 1400);
-      }
 
       // 自适应描边：浅色主题用深色阴影，深色主题（body[data-ds-dark-theme]）用浅色阴影
       function strokeFilter() {
         if (!state.stroke) return "";
-        var s = state.strokeStrength || 1;
         var dark = typeof document !== "undefined" && document.body && document.body.hasAttribute("data-ds-dark-theme");
-        if (dark) {
-          // 深色主题：双白色辉光，强度×s（深色光标在深色背景下更清晰）
-          return "drop-shadow(0 0 " + (2 * s).toFixed(1) + "px rgba(255,255,255,0.95)) drop-shadow(0 0 " + (1 * s).toFixed(1) + "px rgba(255,255,255,0.7))";
-        }
-        return "drop-shadow(0 0 " + (1.5 * s).toFixed(1) + "px rgba(0,0,0,0.6))";
+        return dark
+          ? "drop-shadow(0 0 2px rgba(255,255,255,0.65))"
+          : "drop-shadow(0 0 2px rgba(0,0,0,0.55))";
       }
       function applyStroke() {
         if (state.enabled) cursorEl.style.filter = strokeFilter();
@@ -250,16 +104,6 @@ window.__ModuleLoader__.load({
         panel.className = "dsh-cursor-panel";
         panel.style.display = "none";
         root.appendChild(panel);
-        // "已保存"提示（FAB 上方小红点旁浮出）
-        savedHint = document.createElement("div");
-        savedHint.style.cssText = "position:fixed;right:20px;bottom:136px;z-index:2147483000;pointer-events:none;font-size:11px;color:var(--dsw-alias-state-success-primary,#34c55e);background:var(--dsw-alias-bg-layer-1,#fff);border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));border-radius:8px;padding:3px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);opacity:0;transition:opacity .3s ease;";
-        document.body.appendChild(savedHint);
-        notifySaved = function (ok) {
-          savedHint.textContent = ok ? "✓ 已保存" : "保存失败";
-          savedHint.style.opacity = "1";
-          if (savedHintTimer) clearTimeout(savedHintTimer);
-          savedHintTimer = setTimeout(function () { savedHint.style.opacity = "0"; }, 1400);
-        };
         document.body.appendChild(root);
         // 监听深浅主题切换（body[data-ds-dark-theme]），实时更新描边方向
         if (typeof MutationObserver !== "undefined") {
@@ -416,7 +260,7 @@ window.__ModuleLoader__.load({
         if (!state.trailOn) clearTrail();
         if (!state.rippleOn) clearRipples();
         applyLight();
-        if (hydrated) saveState(state);
+        saveState(state);
         syncFab();
         renderPanel();
       }
@@ -735,19 +579,6 @@ window.__ModuleLoader__.load({
         r1.appendChild(loadBtn);
         r1.appendChild(defBtn);
         im.appendChild(r1);
-        // 当前光标预览
-        var pv = document.createElement("div");
-        pv.style.cssText = "width:56px;height:56px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));border-radius:8px;background:var(--dsw-alias-bg-base,#f7f7f5);background-size:contain;background-repeat:no-repeat;background-position:center;";
-        pv.style.backgroundImage = "url('" + imageUrl() + "')";
-        var pvRow = document.createElement("div");
-        pvRow.className = "dsh-cursor-row";
-        pvRow.appendChild(pv);
-        var pvHint = document.createElement("span");
-        pvHint.className = "dsh-cursor-label";
-        pvHint.style.cssText = "text-transform:none;letter-spacing:0;margin:0;flex:1;";
-        pvHint.textContent = isUploaded ? "当前：上传的图片" : (state.imageUrl ? "当前：URL 图片" : "当前：内置默认");
-        pvRow.appendChild(pvHint);
-        im.appendChild(pvRow);
         if (errMsg) {
           var er = document.createElement("div");
           er.className = "dsh-cursor-err";
@@ -756,7 +587,6 @@ window.__ModuleLoader__.load({
         }
         panel.appendChild(im);
         panel.appendChild(toggleRow("stroke", "描边（自动适配深浅主题）"));
-        panel.appendChild(sliderRow("strokeStrength", "描边强度", 0.5, 2.5, 0.1));
         panel.appendChild(sliderRow("size", "光标大小", 24, 96, 2));
         panel.appendChild(sliderRow("scale", "悬停放大倍数", 1, 2, 0.1));
 
@@ -774,44 +604,6 @@ window.__ModuleLoader__.load({
         panel.appendChild(sliderRow("rippleMaxSize", "波纹最大尺寸", 40, 300, 10));
         panel.appendChild(sliderRow("rippleDuration", "波纹时长(ms)", 300, 2000, 50));
         panel.appendChild(sliderRow("rippleBorderWidth", "波纹边框粗细", 1, 6, 1));
-
-        // ── 预设 ──
-        panel.appendChild(sep());
-        var presetSec = row("光标预设");
-        var pr = document.createElement("div");
-        pr.className = "dsh-cursor-row";
-        var pInput = document.createElement("input");
-        pInput.type = "text";
-        pInput.className = "dsh-cursor-text";
-        pInput.placeholder = "预设名称";
-        pInput.value = presetName;
-        pInput.addEventListener("input", function () { presetName = pInput.value; });
-        pInput.addEventListener("keydown", function (e) { if (e.key === "Enter") savePreset(); });
-        var saveBtn = document.createElement("button");
-        saveBtn.className = "dsh-cursor-chip";
-        saveBtn.style.flex = "0 0 auto";
-        saveBtn.textContent = "保存当前";
-        saveBtn.addEventListener("click", savePreset);
-        pr.appendChild(pInput);
-        pr.appendChild(saveBtn);
-        presetSec.appendChild(pr);
-        var presetList = document.createElement("div");
-        presetList.style.cssText = "display:flex;flex-direction:column;gap:6px;";
-        if (state.presets && state.presets.length) {
-          state.presets.forEach(function (p) { presetList.appendChild(presetRow(p)); });
-        } else {
-          var empty = document.createElement("span");
-          empty.className = "dsh-cursor-label";
-          empty.style.cssText = "text-transform:none;letter-spacing:0;margin:0;";
-          empty.textContent = "暂无预设";
-          presetList.appendChild(empty);
-        }
-        presetSec.appendChild(presetList);
-        panel.appendChild(presetSec);
-
-        // ── 关联主题 ──
-        panel.appendChild(sep());
-        panel.appendChild(toggleRow("linkOn", "关联主题（切进主题→自动换光标）"));
       }
 
       try {
@@ -822,24 +614,6 @@ window.__ModuleLoader__.load({
         document.addEventListener("mouseover", onOver, { passive: true });
         document.addEventListener("click", onDocClick, { passive: true });
         applyState();
-        // 从服务器加载已持久化的配置（服务器端为准），合并后重应用
-        fetch("/api/dsh-cursor-state").then(function (r) { return r.ok ? r.json() : null; }).then(function (server) {
-          if (server && typeof server === "object" && Object.keys(server).length) {
-            state = Object.assign({}, state, server);
-          }
-          hydrated = true;
-          applyState();
-        }).catch(function () {
-          hydrated = true; // 服务器加载失败也允许后续保存（localStorage 兜底）
-          applyState();
-        });
-        // 关联主题：监听 dsh-skin 广播（事件 + DOM 属性变化）+ 初始读一次
-        window.addEventListener("dsh-skin-preset", onSkinPreset);
-        if (typeof MutationObserver !== "undefined" && document.documentElement) {
-          skinObserver = new MutationObserver(function () { applyLinkedCursor(); });
-          skinObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-dsh-active-skin"] });
-        }
-        setTimeout(applyLinkedCursor, 600);
         ctx.effect(function () {
           return function () {
             stopAnim();
@@ -851,12 +625,9 @@ window.__ModuleLoader__.load({
             document.removeEventListener("mouseover", onOver);
             document.removeEventListener("click", onDocClick);
             if (themeObserver) themeObserver.disconnect();
-            if (skinObserver) skinObserver.disconnect();
-            window.removeEventListener("dsh-skin-preset", onSkinPreset);
             showNative();
             if (cursorEl && cursorEl.parentNode) cursorEl.parentNode.removeChild(cursorEl);
             if (root && root.parentNode) root.parentNode.removeChild(root);
-            if (savedHint && savedHint.parentNode) savedHint.parentNode.removeChild(savedHint);
             if (uiStyle && uiStyle.parentNode) uiStyle.parentNode.removeChild(uiStyle);
           };
         });
