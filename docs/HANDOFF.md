@@ -77,10 +77,24 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 - `/root/.dsh/settings.yaml` → `agent-default-model.model = deepseek-v4-flash-vision-exp`
   （**已生效并经会话实测**：本会话经 UI 右下角下拉框切到 vision-exp，`read_image` 读图成功；
   默认配置也已设为 vision-exp，新会话同样生效）。备份：`settings.yaml.bak-vision`。
-- 模型目录已内置 vision-exp（`dsh-llm-deepseek` 的 DEFAULT_MODELS，含 `image` 输入能力），
-  UI 模型选择器（右下角下拉框）可直接选；价格与 v4-flash 相同（图 ≤384 token）。
 - **多模态已解锁**：对话附件通道不再被模型能力限制；图片类任务（看素材/校对/做光标图）可对话完成。
   此前为绕行"不能传图"而做的 dsh-cursor **服务器图片上传仍保留、不冲突**（须保留：插件自身功能）。
+
+### 3.1 V4.1 Flash 与"无版本号"命名（2026-09-10 更新，重要）
+
+- **V4.1 Flash 已于 2026-09-10 12:00（北京时间）正式上线**（官方给 API 用户的邮件；官方文档页当时尚未更新）。
+  V4.1 **Pro 未发布**；`deepseek-v4-pro` 将于 **9/14 12:00 下线**，此后其请求路由到 V4.1 Flash 并按新价计费。
+- **API 现在只接受两个模型名**（官方 400 报错原文）：`deepseek-flash`、`deepseek-v4-pro`；
+  `deepseek-v4.1-flash` / `deepseek-v4.1-pro` **不存在**。
+- **`deepseek-flash` 是无版本号滚动别名**，当前指向 V4.1 Flash；旧名 `deepseek-v4-flash`、
+  `deepseek-v4-flash-vision-exp` 仍可用但**实测均解析为 `deepseek-flash`**（也在跑 V4.1）。
+  多模态随之统一：不再需要单独的 `-vision-exp`，`deepseek-flash` 原生支持图片。
+- **新计费**（空闲时段，每百万 token）：缓存命中 0.02 元、未命中 1 元、输出 4 元（高峰 ×2），比旧 Flash 更便宜。
+- **已做的配置**：`/root/.dsh/profiles/web/cordis.patch.yml` 给 `llm-deepseek` 行加 `models` 目录
+  （`config` 整体替换，故列全）：`deepseek-flash`（DeepSeek-V4.1-Flash，声明
+  `inputModalities: [text, image]` 保留图片能力）+ 两条旧别名 + `deepseek-v4-pro`；
+  已 `dsh web --dump-config` 校验并重启生效。
+- **风险提示**：模型名不再钉版本 → 同名不同代；评测/回归须自行记录调用日期，否则结果不可复现。
 
 ## 4. 关键踩坑速查（接手必读，防重蹈覆辙）
 

@@ -1,0 +1,36 @@
+# Your patch layer for this dsh profile, applied after every bundle layer:
+# a top-level YAML array of loader patch entries (id-targeted config
+# overrides, disables, and insert lists; `!!js` expressions allowed).
+
+- insert:
+    - id: dsh-skin
+      name: 'dsh-skin'
+
+- insert:
+    - id: dsh-cursor
+      name: 'dsh-cursor'
+
+# 模型目录：加入 V4.1 Flash（2026-09-10 上线，以无版本号别名 deepseek-flash 暴露）。
+# 注意 config 是整体替换：这里必须列全要保留的模型；deepseek-flash 需声明
+# inputModalities 含 image 才有图片输入能力（原生多模态）。
+- id: llm-deepseek
+  config:
+    models:
+      - id: deepseek-flash
+        name: DeepSeek-V4.1-Flash
+        contextWindow: 1000000
+        inputModalities: [text, image]
+        imagePixelBudget: 640000
+        imageMaxBytes: 1048576
+      - id: deepseek-v4-flash-vision-exp
+        name: DeepSeek-V4-Flash-Vision-Exp（旧别名→V4.1）
+        contextWindow: 1000000
+        inputModalities: [text, image]
+        imagePixelBudget: 640000
+        imageMaxBytes: 1048576
+      - id: deepseek-v4-flash
+        name: DeepSeek-V4-Flash（旧别名→V4.1）
+        contextWindow: 1000000
+      - id: deepseek-v4-pro
+        name: DeepSeek-V4-Pro
+        contextWindow: 1000000
