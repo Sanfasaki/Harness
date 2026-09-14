@@ -20,8 +20,9 @@ git sync "这次改了什么"        # 任何目录、任何会话
 3. **API 兜底**：`scripts/git-push-api.py` 用 GitHub Git Data API（blobs → tree → commit → ref）
    推送，**内容寻址增量**（远端已有 blob 复用 sha，通常只上传改动的几个文件）。
 4. **分叉自愈**：API 通道创建的提交 sha 与本地不同，会让标准 `push` 被 non-fast-forward 拒绝；
-   脚本写 `.git/DSH_DIVERGED` 标记，下次推送先 `fetch` 对齐（**只在 tree 逐字节一致时才 reset**），
-   网络恢复后自动消除分叉。
+   脚本写 `.git/DSH_DIVERGED` 标记，下次推送先 `fetch` 再判断：
+   **远端是本地祖先 → 正常（本地有新提交，清标记走标准通道）**；否则 tree 逐字节一致 → `reset`
+   对齐；既非祖先又内容不同 → 保留标记改走 API。网络恢复后自动消除分叉。
 
 常用变体：
 

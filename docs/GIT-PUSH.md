@@ -57,14 +57,20 @@ bash /Sanfasaki/Harness/scripts/git-push.sh --no-commit "信息"                
 脚本用 `.git/DSH_DIVERGED` 标记记住这件事，下次推送时会：
 
 1. 先 `git fetch` 尝试对齐；
-2. 只有 tree 与远端**逐字节一致**才 `reset --hard`，然后删掉标记、恢复正常通道；
-3. 若仍无法 fetch，则继续走 API（不阻塞你的工作）；
-4. 网络恢复后第一次 `git sync` 就会自动完成对齐，无需人工干预。
+2. `git merge-base --is-ancestor` 判断远端是否为本地祖先 —— 是则说明**本地只是有新提交要推**
+   （tree 当然不同，属正常），清标记并走标准通道；
+3. 否则若 tree 与远端**逐字节一致**，本地提交只是 API 通道的副本 → `reset --hard` 对齐并清标记；
+4. 既非祖先又内容不同（真冲突）→ 保留标记并改走 API，不阻塞工作；
+5. 网络仍不通 → 继续走 API，网络恢复后第一次 `git sync` 自动完成对齐。
+
+> 第 2 步是 2026-09-14 实测补上的：早先只比对 tree，导致"本地有新提交"这种正常情况
+> 被误判成冲突、绕过了标准通道。
 
 如果确实需要手动处理：
 
 ```bash
 git fetch origin main
+git merge-base --is-ancestor FETCH_HEAD HEAD && echo "远端是祖先，直接 push 即可"
 git rev-parse HEAD^{tree} FETCH_HEAD^{tree}   # 两个 sha 相同 = 内容一致，可安全对齐
 git reset --hard FETCH_HEAD && rm -f .git/DSH_DIVERGED
 ```
