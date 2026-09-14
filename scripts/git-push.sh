@@ -78,6 +78,7 @@ if [ -f "$MARKER" ]; then
     fi
   else
     echo "⚠️  仍无法 fetch，本次继续走 API 通道"
+    export DSH_LINK_DOWN=1
   fi
 fi
 
@@ -86,8 +87,9 @@ fi
 if [ "${FORCE_API:-0}" != "1" ]; then
   SKIP_A=0
   if ! timeout "${GIT_PROBE_TIMEOUT:-15}" git ls-remote -q origin "$BRANCH" >/dev/null 2>&1; then
-    echo "⚠️  git 链路探针失败（$(( ${GIT_PROBE_TIMEOUT:-15} ))s 无响应），跳过标准通道"
+    echo "⚠️  git 链路探针失败（${GIT_PROBE_TIMEOUT:-15}s 无响应），跳过标准通道"
     SKIP_A=1
+    export DSH_LINK_DOWN=1
   fi
   ERR="$(mktemp)"
   if [ "$SKIP_A" -eq 0 ] && timeout "${GIT_PUSH_TIMEOUT:-120}" git push -q origin "$BRANCH" 2>"$ERR"; then

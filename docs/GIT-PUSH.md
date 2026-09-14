@@ -38,8 +38,33 @@ bash /Sanfasaki/Harness/scripts/git-push.sh --no-commit "信息"                
 - A 通道：远端提交是你本地提交本身，本地/远端 sha 相同，`git pull` 正常快进。
 - B 通道：远端提交由 API 创建，父提交取远端当前头。因此 sha 会分叉，
   脚本推送后会尝试 `git fetch` + `reset --hard` 把本地对齐回远端（仅在 tree 完全一致时才 reset）。
-  如果当时网络连 fetch 都不通，脚本会提示"内容已一致、sha 分叉"，下次网络好时
-  `git fetch origin main && git reset --hard origin/main` 即可对齐（tree 相同，无内容风险）。
+
+### 1.1 实测过的三种链路状态与脚本行为
+
+| 链路状态 | 脚本行为 | 实测耗时 |
+| --- | --- | --- |
+| 正常 | 15s 探针通过 → 标准 `git push` 成功 | 数秒 |
+| 抖动/挂死（`git push` 会卡到超时） | 15s 探针失败 → 直接走 API，不白等 | 约 20s + 上传 |
+| 长时间不通 | 走 API；**跳过**注定失败的 fetch（`DSH_LINK_DOWN=1`） | 约 20s + 上传 |
+
+### 1.2 分叉自愈（重要）
+
+走过 B 通道后本地 sha 与远端不同，**标准 `git push` 会被 non-fast-forward 永久拒绝**。
+脚本用 `.git/DSH_DIVERGED` 标记记住这件事，下次推送时会：
+
+1. 先 `git fetch` 尝试对齐；
+2. 只有 tree 与远端**逐字节一致**才 `reset --hard`，然后删掉标记、恢复正常通道；
+3. 若仍无法 fetch，则继续走 API（不阻塞你的工作）；
+4. 网络恢复后第一次 `git sync` 就会自动完成对齐，无需人工干预。
+
+如果确实需要手动处理：
+
+```bash
+git fetch origin main
+git rev-parse HEAD^{tree} FETCH_HEAD^{tree}   # 两个 sha 相同 = 内容一致，可安全对齐
+git reset --hard FETCH_HEAD && rm -f .git/DSH_DIVERGED
+```
+
 
 ## 2. 已经做好的全局配置（一次配置，所有对话/仓库通用）
 

@@ -160,6 +160,11 @@ def main():
     # 分叉标记 .git/DSH_DIVERGED 让下一次推送知道"该先对齐再走标准通道"，实现自愈：
     # 否则本地 sha 与远端不同，标准 git push 会被 non-fast-forward 永久拒绝。
     marker = Path(repo) / ".git" / "DSH_DIVERGED"
+    if os.environ.get("DSH_LINK_DOWN") == "1":
+        # 调用方已判定 git 链路不通，别再做注定失败的 fetch（每次白等 45 秒）
+        marker.write_text(new_commit + "\n")
+        print("⚠️ 链路已知不通，跳过 fetch；本地 sha 与远端分叉，网络恢复后会自动对齐")
+        return
     fetch = subprocess.run(("timeout", "45", "git", "fetch", "-q", "origin", args.branch), cwd=repo, capture_output=True)
     if fetch.returncode == 0:
         fetched = git("rev-parse", "FETCH_HEAD", cwd=repo).strip()
