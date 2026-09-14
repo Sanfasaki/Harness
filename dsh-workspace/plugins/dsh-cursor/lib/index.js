@@ -107,7 +107,7 @@ export function apply(ctx) {
             if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) mime = "image/png";
             else if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) mime = "image/jpeg";
             else if (bytes.length >= 6 && (bytes.toString("latin1", 0, 6) === "GIF87a" || bytes.toString("latin1", 0, 6) === "GIF89a")) mime = "image/gif";
-            res.writeHead(200, { "content-type": mime, "cache-control": "no-store" });
+            res.writeHead(200, { "content-type": mime, "cache-control": "public, max-age=31536000, immutable" });
             res.end(bytes);
             return;
           }

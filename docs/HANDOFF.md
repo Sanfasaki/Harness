@@ -71,8 +71,13 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
   （`data-dsh-active-skin` 属性 + `dsh-skin-preset` 事件），dsh-cursor 切主题时自动应用关联光标。
   已预置映射：`芙莉莲魔杖↔fulilian`、`罗小黑光标↔lxhzj`、`紫罗兰光标↔Violet`
 - 宿主路由 `/api/dsh-cursor-image`：POST（base64 JSON→存 `$DSH_HOME` 根 `dsh-cursor-images-*.b64`，
-  fs 服务无二进制写能力故存 base64 文本）；GET 按**魔数嗅探** MIME（扩展名不可信）
+  fs 服务无二进制写能力故存 base64 文本）；GET 按**魔数嗅探** MIME（扩展名不可信），
+  并回 **`cache-control: public, max-age=1y, immutable`**（文件名唯一）
 - 宿主路由 `/api/dsh-cursor-state`：配置服务器端持久化（与 dsh-skin 一致；localStorage 不可靠）
+- **性能/离线（2026-09-14）**：图片**本地缓存**（首次取到转 data URL 存 localStorage，渲染优先用缓存 →
+  断网/服务器重启不丢光标）；光标与拖尾点用 **`transform: translate3d()` 移动**（不再 left/top 触发 layout）；
+  光标/拖尾/波纹带 **`data-dsh-cursor-layer`** 标记，dsh-skin 的全局颜色过渡会跳过它们；
+  预设图**预解码**，切主题时的光标切换**延后到过渡结束**（详见 §4 第 10、11 条）
 
 ## 3. 模型与会话
 
@@ -137,7 +142,22 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
    （alpha>8 包围盒+1px）；全透明给出提示。
 9. **循环顺序**：自动切换从"当前生效皮肤"匹配预设前进一格（accent/text/图片全等），
    勿用与显示脱钩的整数索引（会折返/跳变）。
-10. **本沙箱网络**：`github.com` git 协议**不通**（clone/push 超时）；HTTP 端点
+10. **光标图片不能是"不可缓存的服务器 URL"**（2026-09-14 修）：光标图原来引用
+   `/api/dsh-cursor-image/...` 且 host 回 `cache-control: no-store` → 任何一次重新应用都得回服务器拿，
+   于是**断网/服务器重启后只有光标消失**（背景/拖尾/自动切换都活着，因为皮肤把壁纸存成 data URL、
+   拖尾只是颜色值、自动切换是本地定时器）。现在：host 改 `public,max-age=1y,immutable`
+   （文件名本身唯一），且**客户端首次取到后转 data URL 存 localStorage**，渲染优先用缓存。
+   注意：以后**替换图片内容必须换文件名**（immutable 缓存按 URL 命中）。
+11. **切主题时光标移动卡顿的三个来源**（2026-09-14 修）：
+    ① 过渡类 `.dsh-skin-transition *` 挂在 `<html>` 上，会把**每个元素**（含正在高频创建/销毁的
+       拖尾点，它们天生带 `box-shadow`）都塞进 6 条 `!important` 过渡 → 主线程重绘爆掉；
+       现在 CSS 排除 `[data-dsh-cursor-layer]`（光标/拖尾/波纹都打这个标记），属**跨插件约定**。
+    ② 光标用 `left/top` 定位 + 带 `drop-shadow` 描边 → 每次 mousemove 触发 layout + 滤镜重光栅；
+       现在改 `transform: translate3d()`（拖尾点同理，尺寸在创建时固定、缩小用 `scale()`）。
+    ③ 关联主题切换原本立刻换图（大图 450KB 现场解码）；现在**预热**（`warmImage` 预解码 + data URL 化）
+       且切换**等过渡结束**（`whenThemeIdle` 轮询 `.dsh-skin-transition`；注意皮肤是"先广播、后加过渡类"，
+       故先等 80ms 再轮询，否则会误判为不忙）。
+12. **本沙箱网络**：`github.com` git 协议**不通**（clone/push 超时）；HTTP 端点
     （registry.npmjs.org / codeload.github.com / raw.githubusercontent.com / api.github.com）
     通但**偶发不稳**，失败即重试。装 GitHub 插件用 codeload tarball + 本地路径 add；
     推仓库用 **GitHub Git Data API**（blob→tree→commit→ref，先建引导提交）。

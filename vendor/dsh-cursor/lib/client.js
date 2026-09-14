@@ -46,6 +46,86 @@ window.__ModuleLoader__.load({
     var MAX_RIPPLE = 12;
     var TRAIL_THROTTLE = 16; // ms
 
+    // ── 图片本地缓存 ──
+    // 光标图片是"服务器 URL + cache-control:no-store"，任何一次重新应用都要回服务器拿，
+    // 于是断网 / 服务器重启后光标就消失（而 dsh-skin 把壁纸存成 data URL，所以背景不受影响）。
+    // 这里首次取到后转 data URL 存 localStorage，渲染时优先用它：离线可用、重新应用零延迟。
+    var IMG_CACHE_PREFIX = "dsh-cursor-img:";
+    function cacheGet(url) {
+      try { return localStorage.getItem(IMG_CACHE_PREFIX + url) || null; } catch (e) { return null; }
+    }
+    function cachePut(url, dataUrl) {
+      if (!url || !dataUrl || url.indexOf("data:") === 0) return;
+      try {
+        localStorage.setItem(IMG_CACHE_PREFIX + url, dataUrl);
+      } catch (e) {
+        // 配额满：清掉本插件自己的缓存条目再试一次（不动其它 key）
+        try {
+          for (var i = localStorage.length - 1; i >= 0; i--) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) localStorage.removeItem(k);
+          }
+          localStorage.setItem(IMG_CACHE_PREFIX + url, dataUrl);
+        } catch (e2) { /* 空间仍不够就放弃，不影响主流程 */ }
+      }
+    }
+    // 渲染用地址：本地有缓存就用缓存，否则用原 URL
+    function renderUrl(url) {
+      if (!url || url.indexOf("data:") === 0) return url;
+      return cacheGet(url) || url;
+    }
+    // 把 URL 图转 data URL 存本地（已有缓存则跳过）
+    function cacheImage(url) {
+      if (!url || url.indexOf("data:") === 0 || cacheGet(url)) return;
+      fetch(url).then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.blob();
+      }).then(function (blob) {
+        return new Promise(function (resolve, reject) {
+          var fr = new FileReader();
+          fr.onload = function () { resolve(fr.result); };
+          fr.onerror = reject;
+          fr.readAsDataURL(blob);
+        });
+      }).then(function (dataUrl) { cachePut(url, dataUrl); }).catch(function () {});
+    }
+    // 预解码：主题切换时直接能画，不用现场解码大图（紫罗兰 PNG 有 450KB）
+    function warmImage(url) {
+      if (!url) return;
+      var img = new Image();
+      img.src = renderUrl(url);
+      if (img.decode) { try { img.decode().catch(function () {}); } catch (e) {} }
+    }
+    // 预热"当前光标 + 所有关联主题的预设"：这两类最可能被重新应用，也最影响体感
+    function warmImages() {
+      if (state.imageUrl) { cacheImage(state.imageUrl); warmImage(state.imageUrl); }
+      for (var i = 0; i < state.presets.length; i++) {
+        var p = state.presets[i];
+        if (p && p.linkTheme && p.imageUrl) { cacheImage(p.imageUrl); warmImage(p.imageUrl); }
+      }
+    }
+    // 主题过渡期间不要切光标：dsh-skin 会给 <html> 挂 .dsh-skin-transition 约 720ms，
+    // 那时整页在重绘颜色，再叠一次换图/解码就是肉眼可见的卡顿。
+    // 注意时序：皮肤是"先广播事件、后加过渡类"，所以先等 80ms 再开始轮询。
+    function whenThemeIdle(cb) {
+      var t0 = performance.now();
+      function poll() {
+        var root = document.documentElement;
+        var busy = root && root.classList.contains("dsh-skin-transition");
+        if (!busy || performance.now() - t0 > 3000) { cb(); return; }
+        setTimeout(poll, 120);
+      }
+      setTimeout(poll, 80);
+    }
+
+    // 光标定位改用 transform: translate3d()（合成器动画，不触发 layout）。
+    var lastX = 0, lastY = 0;
+    function placeCursor(x, y) {
+      lastX = x; lastY = y;
+      if (!cursorEl) return;
+      cursorEl.style.transform = "translate3d(" + x + "px," + y + "px,0) translate(-50%,-50%)";
+    }
+
     function loadState() {
       try {
         var raw = localStorage.getItem(STORE_KEY);
@@ -131,7 +211,7 @@ window.__ModuleLoader__.load({
           }
         }
       }
-      function onSkinPreset() { applyLinkedCursor(); }
+      function onSkinPreset() { whenThemeIdle(applyLinkedCursor); }
       function presetMatches(p) {
         for (var i = 0; i < PARAM_KEYS.length; i++) {
           var k = PARAM_KEYS[i];
@@ -162,6 +242,8 @@ window.__ModuleLoader__.load({
           var k = PARAM_KEYS[i];
           if (p[k] !== undefined) state[k] = p[k];
         }
+        warmImage(state.imageUrl);   // 预解码：切换立刻能画
+        cacheImage(state.imageUrl);  // 本地留存：离线也能切
         applyState();
       }
       function deletePreset(name) {
@@ -231,7 +313,12 @@ window.__ModuleLoader__.load({
       function ensureDom() {
         cursorEl = document.createElement("div");
         cursorEl.className = "dsh-cursor-el";
-        cursorEl.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147483001;background-size:contain;background-repeat:no-repeat;background-position:center;transform:translate(-50%,-50%);transition:transform .1s ease;display:none;";
+        // 定位改用 transform: translate3d()（合成器动画）：原来用 left/top，每次 mousemove
+        // 都触发 layout，还让带 drop-shadow 描边的元素重新光栅化 —— 主题过渡期间就是这么掉帧的。
+        // 同时去掉 transform 过渡，否则光标会滞后于鼠标。
+        cursorEl.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147483001;background-size:contain;background-repeat:no-repeat;background-position:center;transform:translate3d(0,0,0) translate(-50%,-50%);will-change:transform;display:none;";
+        // 标记为"光标图层"：dsh-skin 的全局颜色过渡会跳过带该属性的元素（见 skin 的 EXTRA_CSS）
+        cursorEl.setAttribute("data-dsh-cursor-layer", "");
         document.body.appendChild(cursorEl);
         uiStyle = document.createElement("style");
         uiStyle.setAttribute("data-plugin", "dsh-cursor");
@@ -288,7 +375,11 @@ window.__ModuleLoader__.load({
       function makeTrailDot() {
         var el = document.createElement("div");
         el.className = "dsh-cursor-dot";
-        el.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147482999;border-radius:50%;background:" + state.trailColor + ";box-shadow:0 0 10px " + state.trailColor + ";";
+        var s0 = state.trailSize;
+        el.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147482999;border-radius:50%;"
+          + "width:" + s0 + "px;height:" + s0 + "px;background:" + state.trailColor + ";box-shadow:0 0 10px " + state.trailColor + ";"
+          + "transform:translate3d(0,0,0) translate(-50%,-50%) scale(1);";
+        el.setAttribute("data-dsh-cursor-layer", "");
         document.body.appendChild(el);
         return el;
       }
@@ -296,6 +387,7 @@ window.__ModuleLoader__.load({
         var el = document.createElement("div");
         el.className = "dsh-cursor-ripple";
         el.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147482998;border-radius:50%;border:" + state.rippleBorderWidth + "px solid " + state.rippleColor + ";";
+        el.setAttribute("data-dsh-cursor-layer", "");
         document.body.appendChild(el);
         return el;
       }
@@ -327,13 +419,11 @@ window.__ModuleLoader__.load({
           }
           keep.push(p);
           var easeOut = 1 - Math.pow(1 - progress, 3);
-          var s = state.trailSize * (1 - easeOut);
-          if (s < 0.5) s = 0.5;
+          var k = 1 - easeOut;
+          if (k < 0.03) k = 0.03; // 对应原来"最小 0.5px"的下限
           var o = 1 - easeOut;
-          p.el.style.width = s + "px";
-          p.el.style.height = s + "px";
-          p.el.style.left = (p.x - s / 2) + "px";
-          p.el.style.top = (p.y - s / 2) + "px";
+          // 尺寸在创建时固定，缩小只用 scale()：不再每帧改 width/height/left/top（避免 layout）
+          p.el.style.transform = "translate3d(" + p.x + "px," + p.y + "px,0) translate(-50%,-50%) scale(" + k + ")";
           p.el.style.opacity = String(o);
         }
         trailPoints = keep;
@@ -406,8 +496,8 @@ window.__ModuleLoader__.load({
           cursorEl.style.display = "block";
           cursorEl.style.width = state.size + "px";
           cursorEl.style.height = state.size + "px";
-          cursorEl.style.backgroundImage = "url('" + imageUrl() + "')";
-          cursorEl.style.transform = "translate(-50%, -50%)";
+          cursorEl.style.backgroundImage = "url('" + renderUrl(imageUrl()) + "')";
+          placeCursor(lastX, lastY);
           applyStroke();
         } else {
           cursorEl.style.display = "none";
@@ -428,8 +518,7 @@ window.__ModuleLoader__.load({
       function onMove(e) {
         var now = performance.now();
         if (state.enabled) {
-          cursorEl.style.left = e.clientX + "px";
-          cursorEl.style.top = e.clientY + "px";
+          placeCursor(e.clientX, e.clientY);
         }
         if (state.trailOn) {
           if (now - lastTrailAdd < TRAIL_THROTTLE) return;
@@ -471,6 +560,7 @@ window.__ModuleLoader__.load({
         img.onload = function () {
           state.imageUrl = url;
           errMsg = null;
+          cacheImage(url); // 立刻转 data URL 存本地：以后断网/服务器重启也能画出来
           applyState();
         };
         img.onerror = function () {
@@ -519,6 +609,7 @@ window.__ModuleLoader__.load({
               var croppedB64 = res.url.indexOf(",") >= 0 ? res.url.split(",")[1] : rawB64;
               uploadToServer("cursor.png", croppedB64).then(function (ok) {
                 state.imageUrl = ok.url;
+                cachePut(ok.url, res.url); // 上传时手上就有 data URL，直接缓存
                 errMsg = null;
                 applyState();
               }).catch(function (e) {
@@ -829,17 +920,22 @@ window.__ModuleLoader__.load({
           }
           hydrated = true;
           applyState();
+          warmImages();
         }).catch(function () {
           hydrated = true; // 服务器加载失败也允许后续保存（localStorage 兜底）
           applyState();
+          warmImages();
         });
         // 关联主题：监听 dsh-skin 广播（事件 + DOM 属性变化）+ 初始读一次
         window.addEventListener("dsh-skin-preset", onSkinPreset);
         if (typeof MutationObserver !== "undefined" && document.documentElement) {
-          skinObserver = new MutationObserver(function () { applyLinkedCursor(); });
+          skinObserver = new MutationObserver(function () { whenThemeIdle(applyLinkedCursor); });
           skinObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-dsh-active-skin"] });
         }
-        setTimeout(applyLinkedCursor, 600);
+        // 预热当前光标与"关联主题"的光标图（转 data URL 缓存 + 预解码）
+        warmImages();
+        // 首切也等过渡结束：皮肤是"先广播、后加过渡类"，whenThemeIdle 内部先等 80ms 兜住时序
+        whenThemeIdle(applyLinkedCursor);
         ctx.effect(function () {
           return function () {
             stopAnim();
