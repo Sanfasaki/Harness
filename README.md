@@ -19,7 +19,9 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 |---|---|
 | [docs/DEPLOY.md](./docs/DEPLOY.md) | **部署指南：别人照读即可复刻全套**（一键/手动/验收/FAQ） |
 | [docs/HANDOFF.md](./docs/HANDOFF.md) | **交接文档：让没有上下文的模型/人直接接手本项目**（环境/踩坑/调试/未竟事项） |
+| [docs/GIT-PUSH.md](./docs/GIT-PUSH.md) | **推送指南：任何新对话/新机器照读即可 push**（双通道 `git sync`、全局配置、排错表） |
 | `install.sh` | 一键部署脚本（幂等、带备份） |
+| `scripts/git-push.sh` | 推送工具：先标准 `git push`，失败自动回退 GitHub API（内容寻址增量）。全局别名 `git sync` |
 | `vendor/dsh-skin/` | 主题皮肤插件：极简浅/深、主色/文字色、图片/GIF/视频换肤、命名预设、**自动切换 + 三段式平滑过渡**（含本地修复最终版） |
 | `vendor/dsh-cursor/` | 光标插件：图片光标（上传/URL、自动裁透明边、自适应描边）+ 鼠标拖尾 + 点击波纹 |
 | `assets/cursor-images/` | 光标素材：魔杖特写、用户自制的罗小黑/紫罗兰光标、APNG 修复示例 |

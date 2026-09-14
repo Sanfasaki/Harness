@@ -149,6 +149,7 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 | `assets/theme-wallpapers/` | 三套主题壁纸（fulilian/Violet/lxhzj） |
 | `dsh-workspace/state-snapshots/` | 可恢复快照：光标预设+关联、主题预设摘要 |
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 256m 请求体上限修复） |
+| `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表） |
 | `cursor-components/` | 可移植 React 三件套 |
 | `vendor/` | dsh-skin（修复后）、dsh-cursor（可部署成品） |
 
