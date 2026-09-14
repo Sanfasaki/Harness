@@ -96,7 +96,8 @@ def main():
     print(f"本地文件 {len(entries)} 个")
 
     # 远端当前头 + 已有 blob 映射
-    ref = f"{API}/repos/{owner}/{name}/git/ref/heads/{args.branch}"
+    # 注意：更新引用必须用 /git/refs/（复数）；/git/ref/ 只支持 GET，PATCH 会 404。
+    ref = f"{API}/repos/{owner}/{name}/git/refs/heads/{args.branch}"
     try:
         parent = http("GET", ref, token)["object"]["sha"]
     except SystemExit:
@@ -156,17 +157,24 @@ def main():
     print(f"✅ API 通道推送成功 -> {new_commit[:10]}")
 
     # 把本地对齐到远端 sha（内容一致才会 reset，避免误伤）
-    fetch = subprocess.run(("git", "fetch", "-q", "origin", args.branch), cwd=repo, capture_output=True)
+    # 分叉标记 .git/DSH_DIVERGED 让下一次推送知道"该先对齐再走标准通道"，实现自愈：
+    # 否则本地 sha 与远端不同，标准 git push 会被 non-fast-forward 永久拒绝。
+    marker = Path(repo) / ".git" / "DSH_DIVERGED"
+    fetch = subprocess.run(("timeout", "45", "git", "fetch", "-q", "origin", args.branch), cwd=repo, capture_output=True)
     if fetch.returncode == 0:
         fetched = git("rev-parse", "FETCH_HEAD", cwd=repo).strip()
         git("update-ref", f"refs/remotes/origin/{args.branch}", fetched, cwd=repo)
         if git("rev-parse", "HEAD^{tree}", cwd=repo).strip() == git("rev-parse", f"{fetched}^{{tree}}", cwd=repo).strip():
             git("reset", "--hard", "-q", fetched, cwd=repo)
-            print(f"本地已对齐到远端 sha {fetched[:10]}")
+            marker.unlink(missing_ok=True)
+            print(f"本地已对齐到远端 sha {fetched[:10]}（分叉已消除）")
         else:
+            marker.write_text(new_commit + "\n")
             print("⚠️ 远端 tree 与本地不同，未自动 reset（请人工检查）")
     else:
-        print("⚠️ 无法 fetch（网络受限），本地 sha 与远端分叉；内容已一致，下次 fetch 后可对齐")
+        marker.write_text(new_commit + "\n")
+        print("⚠️ 无法 fetch（网络受限），本地 sha 与远端分叉；内容已一致，"
+              "下次网络恢复时脚本会自动 fetch 对齐")
 
 
 if __name__ == "__main__":

@@ -64,16 +64,41 @@ if [ "$NO_COMMIT" -eq 0 ]; then
 fi
 HEAD_SHA="$(git rev-parse HEAD)"
 
+# ---- 2.5 自愈：上次若走过 API 通道，本地 sha 与远端分叉，标准 push 必被拒 ----
+MARKER="$REPO/.git/DSH_DIVERGED"
+if [ -f "$MARKER" ]; then
+  echo "检测到分叉标记（上次经 API 通道推送），先尝试对齐本地与远端…"
+  if timeout 45 git fetch -q origin "$BRANCH" 2>/dev/null; then
+    if [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse FETCH_HEAD^{tree})" ]; then
+      git reset --hard -q FETCH_HEAD
+      rm -f "$MARKER"
+      echo "✅ 已对齐到远端 $(git rev-parse --short HEAD)，分叉消除"
+    else
+      echo "⚠️  远端 tree 与本地不同，保留分叉标记（需人工检查后再推送）"
+    fi
+  else
+    echo "⚠️  仍无法 fetch，本次继续走 API 通道"
+  fi
+fi
+
 # ---- 3. 通道 A：标准 git push ----
+# 先做 15 秒可达性探针：链路挂死时 git push 会一直卡到超时，白等两分钟没必要。
 if [ "${FORCE_API:-0}" != "1" ]; then
+  SKIP_A=0
+  if ! timeout "${GIT_PROBE_TIMEOUT:-15}" git ls-remote -q origin "$BRANCH" >/dev/null 2>&1; then
+    echo "⚠️  git 链路探针失败（$(( ${GIT_PROBE_TIMEOUT:-15} ))s 无响应），跳过标准通道"
+    SKIP_A=1
+  fi
   ERR="$(mktemp)"
-  if timeout "${GIT_PUSH_TIMEOUT:-120}" git push -q origin "$BRANCH" 2>"$ERR"; then
+  if [ "$SKIP_A" -eq 0 ] && timeout "${GIT_PUSH_TIMEOUT:-120}" git push -q origin "$BRANCH" 2>"$ERR"; then
     rm -f "$ERR"
     echo "✅ git push 成功 -> $(git rev-parse --short HEAD)（标准通道）"
     exit 0
   fi
-  echo "⚠️  标准通道失败，回退 API 通道。git 报错："
-  sed 's/^/     /' "$ERR" | head -6
+  if [ "$SKIP_A" -eq 0 ]; then
+    echo "⚠️  标准通道失败，回退 API 通道。git 报错："
+    sed 's/^/     /' "$ERR" | head -6
+  fi
   rm -f "$ERR"
 fi
 
