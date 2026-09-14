@@ -175,20 +175,6 @@ window.__ModuleLoader__.load({
           if (p && p.linkTheme && p.imageUrl) { cacheImage(p.imageUrl); warmImage(p.imageUrl); }
         }
       }
-      // 主题过渡期间不要切光标：dsh-skin 会给 <html> 挂 .dsh-skin-transition 约 720ms，
-      // 那时整页在重绘颜色，再叠一次换图/解码就是肉眼可见的卡顿。
-      // 注意时序：皮肤是"先广播事件、后加过渡类"，所以先等 80ms 再开始轮询。
-      function whenThemeIdle(cb) {
-        var t0 = performance.now();
-        function poll() {
-          var root = document.documentElement;
-          var busy = root && root.classList.contains("dsh-skin-transition");
-          if (!busy || performance.now() - t0 > 3000) { cb(); return; }
-          setTimeout(poll, 120);
-        }
-        setTimeout(poll, 80);
-      }
-
       // 光标定位改用 transform: translate3d()（合成器动画，不触发 layout）。
       // 注意：位置与"悬停放大"必须共用**同一条** transform —— 只写一半就会把位置打回原点。
       // 曾经 onOver 单独写 translate(-50%,-50%) scale(k)，直接把 translate3d(位置) 抹掉，
@@ -244,7 +230,7 @@ window.__ModuleLoader__.load({
           }
         }
       }
-      function onSkinPreset() { whenThemeIdle(applyLinkedCursor); }
+      function onSkinPreset() { applyLinkedCursor(); }
       function presetMatches(p) {
         for (var i = 0; i < PARAM_KEYS.length; i++) {
           var k = PARAM_KEYS[i];
@@ -981,13 +967,13 @@ window.__ModuleLoader__.load({
         // 关联主题：监听 dsh-skin 广播（事件 + DOM 属性变化）+ 初始读一次
         window.addEventListener("dsh-skin-preset", onSkinPreset);
         if (typeof MutationObserver !== "undefined" && document.documentElement) {
-          skinObserver = new MutationObserver(function () { whenThemeIdle(applyLinkedCursor); });
+          skinObserver = new MutationObserver(function () { applyLinkedCursor(); });
           skinObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-dsh-active-skin"] });
         }
         // 预热当前光标与"关联主题"的光标图（转 data URL 缓存 + 预解码）
+        // —— 有了预解码，切主题时光标可以立刻换图而不掉帧，所以不需要再延后切换时机
         warmImages();
-        // 首切也等过渡结束：皮肤是"先广播、后加过渡类"，whenThemeIdle 内部先等 80ms 兜住时序
-        whenThemeIdle(applyLinkedCursor);
+        setTimeout(applyLinkedCursor, 600);
         ctx.effect(function () {
           return function () {
             stopAnim();
