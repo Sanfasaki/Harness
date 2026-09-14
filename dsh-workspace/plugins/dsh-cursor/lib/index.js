@@ -29,6 +29,12 @@ function imagesDir() {
   return home ? home.replace(/[\\/]+$/, "") : ".";
 }
 
+function stateFilePath() {
+  const home = (typeof process !== "undefined" && process.env && process.env.DSH_HOME) ? process.env.DSH_HOME : "";
+  if (home) return home.replace(/[\\/]+$/, "") + "/dsh-cursor-state.json";
+  return "dsh-cursor-state.json";
+}
+
 function readBody(req, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -112,5 +118,42 @@ export function apply(ctx) {
         }
       },
     }), "dsh-cursor: image route");
+
+    // 光标配置持久化（服务器端，与 dsh-skin 一致；localStorage 在部分环境下不可靠）
+    c.effect(() => c.webServer.register({
+      kind: "prefix",
+      path: "/api/dsh-cursor-state",
+      handler: async (req, res) => {
+        const json = (code, body) => {
+          res.writeHead(code, { "content-type": "application/json; charset=utf-8" });
+          res.end(body);
+        };
+        const plain = (code, t) => {
+          res.writeHead(code, { "content-type": "text/plain; charset=utf-8" });
+          res.end(t);
+        };
+        try {
+          if (req.method === "GET" || req.method === "HEAD") {
+            const target = await c.fs.resolve(stateFilePath());
+            const st = await c.fs.stat(target);
+            if (!st) return json(200, "{}");
+            return json(200, await c.fs.readText(target));
+          }
+          if (req.method === "POST") {
+            const body = await readBody(req, 4 * 1024 * 1024);
+            const target = await c.fs.resolve(stateFilePath());
+            await c.fs.writeText(target, body, undefined, undefined, {
+              mode: "danger-full-access",
+              workspaceRoot: process.cwd()
+            });
+            return json(200, '{"ok":true}');
+          }
+          res.writeHead(405);
+          res.end();
+        } catch (e) {
+          plain(500, String(e && e.message ? e.message : e));
+        }
+      },
+    }), "dsh-cursor: state route");
   });
 }

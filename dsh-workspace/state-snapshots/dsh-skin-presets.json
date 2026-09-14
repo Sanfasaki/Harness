@@ -1,0 +1,49 @@
+{
+  "note": "dsh-skin 主题预设摘要（壁纸已单独导出到 assets/theme-wallpapers/；完整运行态见 $DSH_HOME/dsh-skin-state.json）",
+  "live": {
+    "accent": "#2dd2c7",
+    "text": "#073130",
+    "enabled": true
+  },
+  "presets": [
+    {
+      "name": "fulilian",
+      "accent": "#2dd2c7",
+      "text": "#073130",
+      "region": {
+        "workspace": null,
+        "output": null,
+        "input": null
+      },
+      "wallpaper": "assets/theme-wallpapers/fulilian.jpg",
+      "wallpaperOpacity": 0.73,
+      "otherImages": {}
+    },
+    {
+      "name": "Violet",
+      "accent": "#853fd9",
+      "text": "#341060",
+      "region": {
+        "workspace": null,
+        "output": null,
+        "input": null
+      },
+      "wallpaper": "assets/theme-wallpapers/Violet.jpg",
+      "wallpaperOpacity": 0.6,
+      "otherImages": {}
+    },
+    {
+      "name": "lxhzj",
+      "accent": "#bf551d",
+      "text": "#412307",
+      "region": {
+        "workspace": null,
+        "output": null,
+        "input": null
+      },
+      "wallpaper": "assets/theme-wallpapers/lxhzj.jpg",
+      "wallpaperOpacity": 0.6,
+      "otherImages": {}
+    }
+  ]
+}

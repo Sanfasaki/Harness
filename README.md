@@ -22,7 +22,10 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 | `install.sh` | 一键部署脚本（幂等、带备份） |
 | `vendor/dsh-skin/` | 主题皮肤插件：极简浅/深、主色/文字色、图片/GIF/视频换肤、命名预设、**自动切换 + 三段式平滑过渡**（含本地修复最终版） |
 | `vendor/dsh-cursor/` | 光标插件：图片光标（上传/URL、自动裁透明边、自适应描边）+ 鼠标拖尾 + 点击波纹 |
-| `assets/cursor-images/` | 光标素材：原图与 APNG 损坏修复示例 |
+| `assets/cursor-images/` | 光标素材：魔杖特写、用户自制的罗小黑/紫罗兰光标、APNG 修复示例 |
+| `assets/theme-wallpapers/` | 三套主题壁纸（fulilian 青绿 / Violet 紫 / lxhzj 暖琥珀） |
+| `dsh-workspace/state-snapshots/` | 可恢复的配置快照：光标预设+主题关联、主题预设摘要 |
+| `docs/nginx-dsh.conf` | nginx 站点配置参考（含 `client_max_body_size 256m` 关键修复） |
 | `cursor-components/` | 三件套 React 组件（CustomCursor / CursorTrail / ClickRipple），可移植到任意项目 |
 | `skill/` | Skill 文档：光标效果三件套 + DSH 外观个性化实战经验（含所有踩坑） |
 | `dsh-workspace/` | 开发工作区：DSH 机制文档、插件源码、bundles/patches 模板、脚本 |
