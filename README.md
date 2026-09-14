@@ -22,6 +22,8 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 | [docs/GIT-PUSH.md](./docs/GIT-PUSH.md) | **推送指南：任何新对话/新机器照读即可 push**（双通道 `git sync`、全局配置、排错表） |
 | `install.sh` | 一键部署脚本（幂等、带备份） |
 | `scripts/git-push.sh` | 推送工具：先标准 `git push`，失败自动回退 GitHub API（内容寻址增量）。全局别名 `git sync` |
+| `scripts/sync-personalization.sh` | 个性化内容同步：开发区/线上插件/运行态 → 仓库，根治"副本陈旧"（`--check` 只体检） |
+| `scripts/export-skin-snapshot.py` | 从 dsh-skin 运行态解码壁纸 + 生成主题预设摘要（快照自动生成，勿手写） |
 | `vendor/dsh-skin/` | 主题皮肤插件：极简浅/深、主色/文字色、图片/GIF/视频换肤、命名预设、**自动切换 + 三段式平滑过渡**（含本地修复最终版） |
 | `vendor/dsh-cursor/` | 光标插件：图片光标（上传/URL、自动裁透明边、自适应描边）+ 鼠标拖尾 + 点击波纹 |
 | `assets/cursor-images/` | 光标素材：魔杖特写、用户自制的罗小黑/紫罗兰光标、APNG 修复示例 |

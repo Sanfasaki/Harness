@@ -9,6 +9,10 @@
 git sync "你的提交信息"        # 任何目录下都行（自动 add/commit/push，失败自动换通道）
 ```
 
+> 改的是"个性化"相关内容（插件、壁纸、光标、主题预设）时，**先**跑
+> `bash /Sanfasaki/Harness/scripts/sync-personalization.sh` 把开发区/线上/运行态收进仓库，
+> 再 `git sync`。加 `--check` 只体检不写入。这一步能避免仓库副本落后于线上运行版本。
+
 等价写法（不依赖全局别名）：
 
 ```bash

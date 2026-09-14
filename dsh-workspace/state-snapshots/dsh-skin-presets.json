@@ -1,9 +1,23 @@
 {
-  "note": "dsh-skin 主题预设摘要（壁纸已单独导出到 assets/theme-wallpapers/；完整运行态见 $DSH_HOME/dsh-skin-state.json）",
+  "note": "dsh-skin 主题预设摘要（自动生成：scripts/export-skin-snapshot.py；壁纸见 assets/theme-wallpapers/，完整运行态见 $DSH_HOME/dsh-skin-state.json）",
   "live": {
+    "enabled": true,
     "accent": "#2dd2c7",
     "text": "#073130",
-    "enabled": true
+    "region": {
+      "workspace": null,
+      "output": null,
+      "input": null
+    },
+    "autoSwitch": {
+      "enabled": true,
+      "intervalMin": 10
+    }
+  },
+  "liveWallpaper": {
+    "wallpaper": null,
+    "wallpaperOpacity": 0.73,
+    "otherImages": {}
   },
   "presets": [
     {
