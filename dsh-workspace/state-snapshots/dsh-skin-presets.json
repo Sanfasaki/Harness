@@ -2,8 +2,8 @@
   "note": "dsh-skin 主题预设摘要（自动生成：scripts/export-skin-snapshot.py；壁纸见 assets/theme-wallpapers/，完整运行态见 $DSH_HOME/dsh-skin-state.json）",
   "live": {
     "enabled": true,
-    "accent": "#853fd9",
-    "text": "#341060",
+    "accent": "#bf551d",
+    "text": "#412307",
     "region": {
       "workspace": null,
       "output": null,

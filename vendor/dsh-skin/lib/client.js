@@ -278,7 +278,7 @@ window.__ModuleLoader__.load({
 
     var STATIC_CSS = "\n.dsh-skin-root{position:fixed;right:20px;bottom:20px;z-index:2147483000;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif;}\n.dsh-skin-fab{pointer-events:auto;position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);box-shadow:0 6px 20px rgba(0,0,0,0.14);cursor:pointer;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:transform .15s ease,box-shadow .15s ease;}\n.dsh-skin-fab:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,0.18);}\n.dsh-skin-fab-on::after{content:'';position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:var(--dsw-alias-state-success-primary,#34c55e);border:2px solid var(--dsw-alias-bg-layer-1,#fff);}\n.dsh-skin-panel{pointer-events:auto;width:320px;max-height:74vh;overflow-y:auto;margin-top:10px;margin-left:auto;border-radius:14px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);box-shadow:0 12px 40px rgba(0,0,0,0.2);}\n.dsh-skin-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,0.05));position:sticky;top:0;background:inherit;z-index:1;}\n.dsh-skin-title{font-size:13px;font-weight:600;}\n.dsh-skin-close{border:none;background:none;cursor:pointer;font-size:20px;line-height:1;color:var(--dsw-alias-label-secondary,#666);padding:0;}\n.dsh-skin-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:14px;}\n.dsh-skin-section{display:flex;flex-direction:column;gap:8px;}\n.dsh-skin-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--dsw-alias-label-tertiary,#999);}\n.dsh-skin-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}\n.dsh-skin-chip{flex:1;min-width:0;padding:7px 8px;border-radius:9px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:transparent;color:inherit;font-size:12px;cursor:pointer;}\n.dsh-skin-chip-on{background:var(--dsw-alias-brand-primary,#111);color:var(--dsw-alias-label-primary-inverted,#fff);border-color:transparent;}\n.dsh-skin-btn{padding:6px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:transparent;color:inherit;font-size:12px;cursor:pointer;}\n.dsh-skin-btn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,0.05));}\n.dsh-skin-btn:disabled{opacity:0.5;cursor:default;}\n.dsh-skin-btn-danger{color:var(--dsw-alias-state-error-primary,#d33);}\n.dsh-skin-color{width:40px;height:30px;padding:0;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));border-radius:8px;background:none;cursor:pointer;flex:none;}\n.dsh-skin-text{flex:1;min-width:90px;height:30px;padding:0 8px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:var(--dsw-alias-bg-base,#f7f7f5);color:inherit;font-size:12px;box-sizing:border-box;}\n.dsh-skin-img{display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:10px;border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,0.05));}\n.dsh-skin-img-title{font-size:12px;color:var(--dsw-alias-label-secondary,#666);flex:none;}\n.dsh-skin-hint{font-size:11px;color:var(--dsw-alias-label-tertiary,#999);}\n.dsh-skin-preview{height:56px;border-radius:8px;background-size:cover;background-position:center;border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,0.05));}\n.dsh-skin-preset-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,0.05));}.dsh-skin-preset-active{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,0.05));border-color:var(--dsw-alias-border-l2,rgba(0,0,0,0.1));}\n.dsh-skin-preset-name{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}\n.dsh-skin-err{padding:8px 10px;border-radius:8px;font-size:11px;line-height:16px;color:var(--dsw-alias-state-error-primary,#d33);background:rgba(236,19,19,0.06);}\n";
 
-    var EXTRA_CSS = ".dsh-skin-range{flex:1;min-width:56px;height:30px;margin:0;accent-color:var(--dsw-alias-brand-primary,#111);}.dsh-skin-num{width:60px;height:28px;padding:0 4px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:var(--dsw-alias-bg-base,#f7f7f5);color:inherit;font-size:12px;box-sizing:border-box;}.dsh-skin-preview{width:100%;object-fit:cover;object-position:center;}.dsh-skin-vh{position:relative;z-index:0;background:transparent !important;}.dsh-skin-vh .hHd-Xa_root{background:transparent !important;}.dsh-skin-transition,.dsh-skin-transition *:not([data-dsh-cursor-layer]),.dsh-skin-transition *:not([data-dsh-cursor-layer])::before,.dsh-skin-transition *:not([data-dsh-cursor-layer])::after{transition:background-color .5s cubic-bezier(.4,0,.2,1),color .5s cubic-bezier(.4,0,.2,1),border-color .5s cubic-bezier(.4,0,.2,1),fill .5s cubic-bezier(.4,0,.2,1),stroke .5s cubic-bezier(.4,0,.2,1),box-shadow .5s cubic-bezier(.4,0,.2,1)!important;}";
+    var EXTRA_CSS = ".dsh-skin-range{flex:1;min-width:56px;height:30px;margin:0;accent-color:var(--dsw-alias-brand-primary,#111);}.dsh-skin-num{width:60px;height:28px;padding:0 4px;border-radius:8px;border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));background:var(--dsw-alias-bg-base,#f7f7f5);color:inherit;font-size:12px;box-sizing:border-box;}.dsh-skin-preview{width:100%;object-fit:cover;object-position:center;}.dsh-skin-vh{position:relative;z-index:0;background:transparent !important;}.dsh-skin-vh .hHd-Xa_root{background:transparent !important;}.dsh-skin-transition,.dsh-skin-transition *:not([data-dsh-cursor-layer]),.dsh-skin-transition *:not([data-dsh-cursor-layer])::before,.dsh-skin-transition *:not([data-dsh-cursor-layer])::after{transition:background-color .45s cubic-bezier(.4,0,.2,1),color .45s cubic-bezier(.4,0,.2,1),border-color .45s cubic-bezier(.4,0,.2,1)!important;}";
 
     var inject = ["slots", "theme"];
 
@@ -333,7 +333,16 @@ window.__ModuleLoader__.load({
       function withThemeTransition(oldWp, newWp, applyFn) {
         var root = document.documentElement;
         if (activeCleanup) { var prev = activeCleanup; activeCleanup = null; prev(); } // 收尾上一次未完成的过渡
-        root.classList.add("dsh-skin-transition");
+        // 注意：过渡类**不在这里**挂。它挂上的每一毫秒，整页每个元素都带着 6 条 !important 过渡，
+        // 鼠标划过 UI 时悬停反馈会被拉长成 0.5s 动画 → 主线程被动画塞满、光标移动卡顿。
+        // 而颜色过渡只在"颜色真的变了"时才有意义（CSS transition 只在值变化时动画），
+        // 所以改到 applyFn 之前挂、500ms 后摘（见下），把这段窗口从 ~1.6-2s 压到 ~0.5s。
+        var colorTimer = null;
+        function startColorTransition() {
+          root.classList.add("dsh-skin-transition");
+          if (colorTimer) clearTimeout(colorTimer);
+          colorTimer = setTimeout(function () { root.classList.remove("dsh-skin-transition"); }, 520);
+        }
         var oldUrl = oldWp && oldWp.url ? oldWp.url : "";
         var newUrl = newWp && newWp.url ? newWp.url : "";
         var newIsVideo = newWp && newWp.type === "video";
@@ -346,6 +355,7 @@ window.__ModuleLoader__.load({
           if (activeCleanup === cleanup) activeCleanup = null;
           if (veil && veil.parentNode) veil.parentNode.removeChild(veil);
           veil = null;
+          if (colorTimer) clearTimeout(colorTimer);
           root.classList.remove("dsh-skin-transition");
         }
         function veilBaseColor() {
@@ -359,7 +369,8 @@ window.__ModuleLoader__.load({
         if (canAnim) {
           veil = document.createElement("div");
           veil.id = "dsh-skin-veil";
-          veil.style.cssText = "position:fixed;inset:0;z-index:-1;pointer-events:none;background:" + veilBaseColor() + ";opacity:0;";
+          // will-change:opacity → 遮罩单独一层，opacity 动画在合成器上跑，不占主线程重绘全屏
+          veil.style.cssText = "position:fixed;inset:0;z-index:-1;pointer-events:none;background:" + veilBaseColor() + ";opacity:0;will-change:opacity;";
           document.body.appendChild(veil);
           var T_OUT = 300, T_VOID = 120, T_IN = 300;
           function run(fadeOut) {
@@ -378,6 +389,7 @@ window.__ModuleLoader__.load({
             run(true); // 阶段1：遮罩盖上来，旧壁纸渐渐消失
             setTimeout(function () {
               if (finished) return;
+              startColorTransition(); // 此刻颜色才真正变化，颜色过渡窗口从这里开始（≈0.5s）
               applyFn(); // 阶段2（无）：不透明遮罩后切换主题，新壁纸保持不可见
               setTimeout(function () {
                 if (finished) return;
@@ -392,6 +404,7 @@ window.__ModuleLoader__.load({
           img.src = newUrl;
           window.setTimeout(start, 800); // 兜底：再慢也不能让过渡卡住
         } else {
+          startColorTransition();
           applyFn();
           if (transitionTimer) clearTimeout(transitionTimer);
           transitionTimer = setTimeout(cleanup, 800);

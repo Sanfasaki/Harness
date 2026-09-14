@@ -62,6 +62,22 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 - **三段式平滑过渡**（遮罩 0→1 → 无 → 1→0，WAAPI）
 - 本地修复清单（详见 `dsh-workspace/docs/appearance.md` §6-7）
 
+### dsh-skin 过渡成本（2026-09-14 优化，别改回去）
+
+`.dsh-skin-transition` 类一旦挂在 `<html>` 上，**整页每个元素**都带 `!important` 过渡；
+它挂多久，"鼠标划过 UI 时悬停反馈被拉长成 0.5s 动画"的主线程压力就持续多久。
+**实测（`scripts/measure-theme-switch.cjs --class-lifetime`）**：
+
+| 版本 | 过渡类存在窗口 | 说明 |
+|---|---|---|
+| 优化前 | **~1.6–2.0s** | 从"点击瞬间"一直挂到过渡结束（含等新壁纸解码，最多 800ms） |
+| 优化后 | **~300–500ms** | 只在 `applyFn()`（颜色真正变化）前后挂 520ms |
+
+三处改动：① 类改到 `applyFn()` 前才挂（CSS transition 只在值变化时才有意义）；② 遮罩加
+`will-change:opacity` 上合成层（opacity 动画不再每帧重绘全屏）；③ 全局过渡去掉最贵的
+`box-shadow`/`fill`/`stroke`，只留 `background-color`/`color`/`border-color`，0.5s → 0.45s。
+**视觉零变化**（类本身不产生动画，只是让颜色变化有过渡）。
+
 ### dsh-cursor（insert 行 `dsh-cursor`）
 - 图片光标：上传（服务器存储）/URL/内置默认；悬停放大、离窗隐藏、输入框保留 I-beam、
   **自适应描边 + 描边强度**（浅色深影／深色双白辉光，强度×s，MutationObserver 实时）
@@ -164,6 +180,13 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
        而 `mouseover` 移动时几乎不停触发 → **光标被钉死在屏幕左上角**。
        现在只有 `applyCursorTransform()` 一个生成点，其它地方走 `placeCursor()` / `setHoverScale()`。
        教训：同一元素上同一属性的多个写入方 = 定时炸弹，改成"单一生成点 + 语义化 setter"。
+    ④b **后来发现"切主题卡顿"的真正大头不是光标图层，而是全局过渡窗口太长**：
+       见 §2「dsh-skin 过渡成本」—— 实测从 1.6-2.0s 压到 ~300ms。教训：
+       先前只盯着"光标自己的图层"，没想到代价来自"鼠标划过被过渡拉长的整个 UI"。
+       定位手段：`scripts/measure-theme-switch.cjs`（无头 Chrome + CDP：
+       `--class-lifetime` 量窗口长度，默认模式做掉帧 A/B，`--screenshot` 出图肉眼验收）。
+       ⚠️ 注意该脚本的**掉帧数字不可当结论**：沙箱无 GPU（软件渲染基线就 ~20fps），
+       它只能证明"DOM 状态/窗口长度"这类确定性事实，体感必须由用户在真机判断。
     ⑤ **更隐蔽的一次同症状翻车：作用域错位**。`state` / `cursorEl` 声明在 `apply(ctx)` 内部
        （6 空格缩进），而新加的辅助函数被插到了工厂作用域（4 空格）→ `applyCursorTransform()` 里
        `cursorEl` 是未声明变量 → **每次 mousemove 抛 ReferenceError** → transform 停在 cssText 初始值
@@ -208,6 +231,8 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 256m 请求体上限修复） |
 | `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表） |
 | `agents/` | workspace 指令（AGENTS.md）部署源：让**其他对话自动读到约定**，见 §8.2 |
+| `scripts/measure-theme-switch.cjs` | 无头 Chrome 实测：过渡窗口时长（可靠）/ 掉帧 A/B（沙箱无 GPU，仅参考）/ 截图验收 |
+| `dsh-workspace/plugins/dsh-cursor/test/client-smoke.cjs` | 客户端冒烟测试：真跑 bundle，断言光标跟随等行为（部署前必跑） |
 | `profiles/settings.example.yaml` | `$DSH_HOME/settings.yaml` 模板：默认模型 + 模型目录（含 UI 标签），**热加载** |
 | `skill/harness-git-push-skill.md` | 推送流程 Skill 部署源（模型可按需自行加载） |
 | `cursor-components/` | 可移植 React 三件套 |
