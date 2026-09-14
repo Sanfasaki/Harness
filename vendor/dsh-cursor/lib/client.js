@@ -141,11 +141,23 @@ window.__ModuleLoader__.load({
     }
 
     // 光标定位改用 transform: translate3d()（合成器动画，不触发 layout）。
-    var lastX = 0, lastY = 0;
+    // 注意：位置与"悬停放大"必须共用**同一条** transform —— 只写一半就会把位置打回原点。
+    // 曾经 onOver 单独写 translate(-50%,-50%) scale(k)，直接把 translate3d(位置) 抹掉，
+    // 表现为"光标卡在屏幕左上角不动"（mouseover 移动时几乎不停触发）。
+    // 因此这里只保留一个生成点 applyCursorTransform()，其它地方一律走 placeCursor/setHoverScale。
+    var lastX = 0, lastY = 0, hoverScale = 1;
+    function applyCursorTransform() {
+      if (!cursorEl) return;
+      cursorEl.style.transform = "translate3d(" + lastX + "px," + lastY + "px,0)"
+        + " translate(-50%,-50%) scale(" + hoverScale + ")";
+    }
     function placeCursor(x, y) {
       lastX = x; lastY = y;
-      if (!cursorEl) return;
-      cursorEl.style.transform = "translate3d(" + x + "px," + y + "px,0) translate(-50%,-50%)";
+      applyCursorTransform();
+    }
+    function setHoverScale(k) {
+      hoverScale = k;
+      applyCursorTransform();
     }
 
     function loadState() {
@@ -394,21 +406,23 @@ window.__ModuleLoader__.load({
 
       function imageUrl() { return state.imageUrl || DEFAULT_IMAGE; }
 
-      function makeTrailDot() {
+      function makeTrailDot(x, y) {
         var el = document.createElement("div");
         el.className = "dsh-cursor-dot";
         var s0 = state.trailSize;
+        // 创建时就直接用真实坐标，否则它会先在 (0,0) 闪一帧（要等下一帧 rAF 才被摆位）
         el.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147482999;border-radius:50%;"
           + "width:" + s0 + "px;height:" + s0 + "px;background:" + state.trailColor + ";box-shadow:0 0 10px " + state.trailColor + ";"
-          + "transform:translate3d(0,0,0) translate(-50%,-50%) scale(1);";
+          + "transform:translate3d(" + x + "px," + y + "px,0) translate(-50%,-50%) scale(1);";
         el.setAttribute("data-dsh-cursor-layer", "");
         document.body.appendChild(el);
         return el;
       }
-      function makeRippleEl() {
+      function makeRippleEl(x, y) {
         var el = document.createElement("div");
         el.className = "dsh-cursor-ripple";
-        el.style.cssText = "position:fixed;left:0;top:0;pointer-events:none;z-index:2147482998;border-radius:50%;border:" + state.rippleBorderWidth + "px solid " + state.rippleColor + ";";
+        // 同理：创建时就落到点击点，避免先在左上角闪一帧
+        el.style.cssText = "position:fixed;left:" + x + "px;top:" + y + "px;pointer-events:none;z-index:2147482998;border-radius:50%;border:" + state.rippleBorderWidth + "px solid " + state.rippleColor + ";";
         el.setAttribute("data-dsh-cursor-layer", "");
         document.body.appendChild(el);
         return el;
@@ -545,7 +559,7 @@ window.__ModuleLoader__.load({
         if (state.trailOn) {
           if (now - lastTrailAdd < TRAIL_THROTTLE) return;
           lastTrailAdd = now;
-          trailPoints.push({ x: e.clientX, y: e.clientY, t: now, el: makeTrailDot() });
+          trailPoints.push({ x: e.clientX, y: e.clientY, t: now, el: makeTrailDot(e.clientX, e.clientY) });
           if (trailPoints.length > MAX_TRAIL) {
             var old = trailPoints.shift();
             if (old.el && old.el.parentNode) old.el.parentNode.removeChild(old.el);
@@ -564,13 +578,11 @@ window.__ModuleLoader__.load({
         var clickable = target && target.closest
           ? target.closest('a, button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"], [onclick]')
           : null;
-        cursorEl.style.transform = clickable
-          ? "translate(-50%, -50%) scale(" + state.scale + ")"
-          : "translate(-50%, -50%)";
+        setHoverScale(clickable ? state.scale : 1);
       }
       function onDocClick(e) {
         if (!state.rippleOn) return;
-        ripples.push({ x: e.clientX, y: e.clientY, t: performance.now(), el: makeRippleEl() });
+        ripples.push({ x: e.clientX, y: e.clientY, t: performance.now(), el: makeRippleEl(e.clientX - state.rippleBorderWidth, e.clientY - state.rippleBorderWidth) });
         if (ripples.length > MAX_RIPPLE) {
           var old = ripples.shift();
           if (old.el && old.el.parentNode) old.el.parentNode.removeChild(old.el);

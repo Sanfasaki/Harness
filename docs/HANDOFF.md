@@ -159,6 +159,11 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
     ③ 关联主题切换原本立刻换图（大图 450KB 现场解码）；现在**预热**（`warmImage` 预解码 + data URL 化）
        且切换**等过渡结束**（`whenThemeIdle` 轮询 `.dsh-skin-transition`；注意皮肤是"先广播、后加过渡类"，
        故先等 80ms 再轮询，否则会误判为不忙）。
+    ④ **踩坑（改完当场就炸过一次）**：位置一旦搬进 transform，**缩放和位置必须共用同一条 transform**。
+       `onOver` 原来单独写 `translate(-50%,-50%) scale(k)`，把 `translate3d(位置)` 整个抹掉，
+       而 `mouseover` 移动时几乎不停触发 → **光标被钉死在屏幕左上角**。
+       现在只有 `applyCursorTransform()` 一个生成点，其它地方走 `placeCursor()` / `setHoverScale()`。
+       教训：同一元素上同一属性的多个写入方 = 定时炸弹，改成"单一生成点 + 语义化 setter"。
 12. **本沙箱网络**：`github.com` git 协议**不通**（clone/push 超时）；HTTP 端点
     （registry.npmjs.org / codeload.github.com / raw.githubusercontent.com / api.github.com）
     通但**偶发不稳**，失败即重试。装 GitHub 插件用 codeload tarball + 本地路径 add；
