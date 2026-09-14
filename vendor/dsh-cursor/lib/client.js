@@ -69,6 +69,27 @@ window.__ModuleLoader__.load({
         } catch (e2) { /* 空间仍不够就放弃，不影响主流程 */ }
       }
     }
+    // 本插件缓存了多少张图 / 清空（面板上用）
+    function imgCacheCount() {
+      var n = 0;
+      try {
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) n++;
+        }
+      } catch (e) {}
+      return n;
+    }
+    function clearImgCache() {
+      var n = 0;
+      try {
+        for (var i = localStorage.length - 1; i >= 0; i--) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) { localStorage.removeItem(k); n++; }
+        }
+      } catch (e) {}
+      return n;
+    }
     // 渲染用地址：本地有缓存就用缓存，否则用原 URL
     function renderUrl(url) {
       if (!url || url.indexOf("data:") === 0) return url;
@@ -99,8 +120,9 @@ window.__ModuleLoader__.load({
     // 预热"当前光标 + 所有关联主题的预设"：这两类最可能被重新应用，也最影响体感
     function warmImages() {
       if (state.imageUrl) { cacheImage(state.imageUrl); warmImage(state.imageUrl); }
-      for (var i = 0; i < state.presets.length; i++) {
-        var p = state.presets[i];
+      var list = state.presets || [];
+      for (var i = 0; i < list.length; i++) {
+        var p = list[i];
         if (p && p.linkTheme && p.imageUrl) { cacheImage(p.imageUrl); warmImage(p.imageUrl); }
       }
     }
@@ -839,6 +861,25 @@ window.__ModuleLoader__.load({
         pvHint.textContent = isUploaded ? "当前：上传的图片" : (state.imageUrl ? "当前：URL 图片" : "当前：内置默认");
         pvRow.appendChild(pvHint);
         im.appendChild(pvRow);
+        // 本地图片缓存状态 + 清空（服务端原地替换了同名图片时，本地缓存会过期，点这里强制重取）
+        var cacheRow = document.createElement("div");
+        cacheRow.className = "dsh-cursor-row";
+        var cacheHint = document.createElement("span");
+        cacheHint.className = "dsh-cursor-label";
+        cacheHint.style.cssText = "text-transform:none;letter-spacing:0;margin:0;flex:1;";
+        cacheHint.textContent = "本地图片缓存 " + imgCacheCount() + " 张（断网也能用）";
+        var cacheClear = document.createElement("button");
+        cacheClear.className = "dsh-cursor-chip";
+        cacheClear.style.flex = "none";
+        cacheClear.textContent = "清空缓存";
+        cacheClear.addEventListener("click", function () {
+          var n = clearImgCache();
+          errMsg = "已清空本地图片缓存 " + n + " 张（下次渲染重新从服务器取）";
+          applyState();
+        });
+        cacheRow.appendChild(cacheHint);
+        cacheRow.appendChild(cacheClear);
+        im.appendChild(cacheRow);
         if (errMsg) {
           var er = document.createElement("div");
           er.className = "dsh-cursor-err";
