@@ -84,12 +84,17 @@ MARKER="$REPO/.git/DSH_DIVERGED"
 if [ -f "$MARKER" ] && [ "$SKIP_A" -eq 0 ]; then
   echo "检测到分叉标记（上次经 API 通道推送），尝试对齐本地与远端…"
   if timeout 45 git fetch -q origin "$BRANCH" 2>/dev/null; then
-    if [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse FETCH_HEAD^{tree})" ]; then
+    if git merge-base --is-ancestor FETCH_HEAD HEAD 2>/dev/null; then
+      # 远端是本地祖先：本地只是有新提交要推，属于正常情况（tree 当然不同），直接走标准通道
+      rm -f "$MARKER"
+      echo "✅ 远端是本地祖先（本地有新提交待推送），分叉标记已清除"
+    elif [ "$(git rev-parse HEAD^{tree})" = "$(git rev-parse FETCH_HEAD^{tree})" ]; then
+      # 真正分叉但内容一致：本地这个提交只是 API 通道的副本，对齐到远端即可
       git reset --hard -q FETCH_HEAD
       rm -f "$MARKER"
       echo "✅ 已对齐到远端 $(git rev-parse --short HEAD)，分叉消除"
     else
-      echo "⚠️  远端 tree 与本地不同，保留分叉标记（需人工检查）"
+      echo "⚠️  远端与本地内容确实不同（既非祖先也非同一 tree），保留分叉标记并改走 API"
       SKIP_A=1
     fi
   else
