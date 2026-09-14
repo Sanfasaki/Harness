@@ -66,6 +66,29 @@ packages:
 cd ~/.dsh/profiles/web && pnpm install
 ```
 
+### 2.1 默认模型（`$DSH_HOME/settings.yaml`）
+
+新会话用哪个模型由 settings.yaml 的 `agent-default-model` 段决定（**用户层覆盖 composition 默认**）：
+
+```yaml
+agent-default-model:
+  provider: deepseek-official
+  model: deepseek-flash          # 无版本号滚动别名，当前 = V4.1 Flash，原生支持图片
+  reasoningEffort: high
+```
+
+两个容易踩的点（都实测过）：
+
+- **`dsh --dump-config` 显示的不是它。** dump 输出的是 composition/基础层（本机是旧值
+  `deepseek-v4-flash`），settings.yaml 作为用户层在运行时覆盖它。判断默认模型要读 `settings.yaml`，
+  或看 `dsh-agent-default-model` 的 `scope.get()` 合并结果，**不能看 dump-config**。
+- **已在运行的长会话不跟着变**：会话模型在创建时确定，改 settings.yaml 只影响新会话。
+  想让当前会话换标签，用 UI 模型下拉框重选。settings.yaml 是热加载的（`watch: true`），不必重启。
+
+模型名要出现在 `llm-deepseek` 的 `models` 目录里（见 `patches/web-profile-cordis.patch.yml`，
+注意该 `config` 是**整体替换**，列不全就会把其它模型挤掉；带图片能力的条目必须声明
+`inputModalities: [text, image]`）。
+
 ## 3. 重启生效
 
 ```sh

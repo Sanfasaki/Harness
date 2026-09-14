@@ -13,6 +13,12 @@
 # 模型目录：加入 V4.1 Flash（2026-09-10 上线，以无版本号别名 deepseek-flash 暴露）。
 # 注意 config 是整体替换：这里必须列全要保留的模型；deepseek-flash 需声明
 # inputModalities 含 image 才有图片输入能力（原生多模态）。
+#
+# 本文件只负责"可选模型目录"；**默认模型不在这里**，而在 $DSH_HOME/settings.yaml 的
+# agent-default-model 段（用户层，覆盖 composition 基础层），当前值为：
+#   provider: deepseek-official / model: deepseek-flash / reasoningEffort: high
+# 提醒：`dsh --dump-config` 打印的是基础层（会显示旧值 deepseek-v4-flash），
+#       不能用它判断默认模型；改 settings.yaml 是热加载，只影响新会话。
 - id: llm-deepseek
   config:
     models:

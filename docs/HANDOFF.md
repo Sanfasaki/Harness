@@ -5,8 +5,9 @@
 > 全部代码、修复、部署方式、踩坑与未竟事项都在这里 + 下方指向的文件里。
 > 仓库：https://github.com/Sanfasaki/Harness ｜ 本地源码：`/Sanfasaki/dsh-workspace`
 
-**最近更新（2026-09-02）**：默认模型已切 `deepseek-v4-flash-vision-exp` 并**已在本会话实测通过**
-（read_image 读图成功，会话与默认配置均为 vision-exp）；本文档为"当前唯一事实来源"，
+**最近更新（2026-09-14）**：默认模型已是 `deepseek-flash`（无版本号滚动别名，当前 = V4.1 Flash，
+原生支持图片）；旧的 `deepseek-v4-flash-vision-exp` 仅作兼容保留在模型目录里，新会话不再使用它。
+推送仓库请用 `git sync "信息"`（双通道，见 `docs/GIT-PUSH.md`）。本文档为"当前唯一事实来源"，
 后续须随每次变更实时同步（见 §8 维护约定）。
 
 ## 0.1 用户审美档案（做任何外观改动前先读）
@@ -31,7 +32,8 @@
 
 DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切换/三段式平滑过渡，含本地修复）与
 **dsh-cursor**（图片光标 + 拖尾 + 点击波纹 + 服务器图片上传），已推送到
-`github.com/Sanfasaki/Harness`；默认模型已切 `deepseek-v4-flash-vision-exp`（新会话生效）。
+`github.com/Sanfasaki/Harness`；默认模型为 `deepseek-flash`（新会话生效；已在运行会话是创建时取的旧别名，
+两者实际同一模型）。
 
 ## 1. 环境事实（命令可直接用）
 
@@ -74,9 +76,11 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 
 ## 3. 模型与会话
 
-- `/root/.dsh/settings.yaml` → `agent-default-model.model = deepseek-v4-flash-vision-exp`
-  （**已生效并经会话实测**：本会话经 UI 右下角下拉框切到 vision-exp，`read_image` 读图成功；
-  默认配置也已设为 vision-exp，新会话同样生效）。备份：`settings.yaml.bak-vision`。
+- `/root/.dsh/settings.yaml` → `agent-default-model.model = deepseek-flash`（2026-09-10 写入，服务 09-14 重启后已加载）。
+  现状核对命令：`grep -A3 agent-default-model /root/.dsh/settings.yaml`。备份：`settings.yaml.bak-vision`（内容是更早的 `deepseek-v4-flash`）。
+- **已在运行的长会话不会跟着改**：会话的模型在创建时确定，`sessions/` 里也没有持久化模型 id，
+  所以本会话仍显示旧的 `deepseek-v4-flash-vision-exp` —— 但这只是标签差异，该别名实测解析为
+  `deepseek-flash`，**同一个模型**。想让当前会话换标签，用 UI 的模型下拉框重选即可（不影响能力）。
 - **多模态已解锁**：对话附件通道不再被模型能力限制；图片类任务（看素材/校对/做光标图）可对话完成。
   此前为绕行"不能传图"而做的 dsh-cursor **服务器图片上传仍保留、不冲突**（须保留：插件自身功能）。
 
@@ -93,7 +97,13 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 - **已做的配置**：`/root/.dsh/profiles/web/cordis.patch.yml` 给 `llm-deepseek` 行加 `models` 目录
   （`config` 整体替换，故列全）：`deepseek-flash`（DeepSeek-V4.1-Flash，声明
   `inputModalities: [text, image]` 保留图片能力）+ 两条旧别名 + `deepseek-v4-pro`；
-  已 `dsh web --dump-config` 校验并重启生效。
+  已 `dsh --dump-config` 校验模型目录行并重启生效。
+- **默认模型与 dump-config 的区别（易误判，实测确认）**：默认模型写在 `settings.yaml` 的
+  `agent-default-model` 段（用户层），它**覆盖** composition 基础层；而 `--dump-config` 打印的恰恰是
+  基础层（本机显示旧值 `deepseek-v4-flash`），所以**不能拿 dump-config 判断默认模型**。
+  判定依据：`grep -A3 agent-default-model /root/.dsh/settings.yaml`，或读
+  `dsh-agent-default-model` 的 `installSettingsSection(..., { base: entry })` —— 其中
+  `scope.get()`（= 用户层优先的合并值）才是插件实时来源。settings.yaml 热加载，改完无需重启（只影响新会话）。
 - **风险提示**：模型名不再钉版本 → 同名不同代；评测/回归须自行记录调用日期，否则结果不可复现。
 
 ## 4. 关键踩坑速查（接手必读，防重蹈覆辙）
