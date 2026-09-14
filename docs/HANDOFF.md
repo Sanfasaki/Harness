@@ -104,6 +104,18 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
   判定依据：`grep -A3 agent-default-model /root/.dsh/settings.yaml`，或读
   `dsh-agent-default-model` 的 `installSettingsSection(..., { base: entry })` —— 其中
   `scope.get()`（= 用户层优先的合并值）才是插件实时来源。settings.yaml 热加载，改完无需重启（只影响新会话）。
+- **`--dump-config` 对 `disabled` 同样不可信（2026-09-14 实测）**：dump 里 `agent-instructions`、
+  `tool-todo`、`tool-web` 都写着 `disabled: true`，但运行时它们**全都是启用的**（AGENTS.md 注入实测生效、
+  会话里 todo/web 工具都在）。dump 只反映 composition 层，判断运行时行为只能实测。
+- **模型标签（UI 菜单显示名）约定**：`llm-deepseek.models[].name` 就是菜单里那行字，本机一律
+  **以模型 id 开头**（如 `deepseek-flash（V4.1 Flash・当前默认）`），否则菜单里看不出该选哪个 id。
+- **模型目录与默认模型都已迁到 `settings.yaml`（2026-09-14）**：`agent-default-model` 段管默认模型，
+  `llm-deepseek.models` 段管可选目录（含标签）。原因：`llm-deepseek` 支持 settings **热加载**
+  （官方模块注释：catalog/key 改完"下一个请求生效，无需重启"），放这里改标签**不用重启**；
+  原先写在 `cordis.patch.yml` 是启动期配置，改一次要重启一次（且与 settings 形成双来源）。
+  模板：`profiles/settings.example.yaml`；patch 里只留了指针注释。
+  改完的自检：`dsh --profile headless "只回复两个字母：OK"`（真起进程 → 验证 settings 可解析、
+  目录 schema 通过、默认模型可调用；实测通过）。
 - **风险提示**：模型名不再钉版本 → 同名不同代；评测/回归须自行记录调用日期，否则结果不可复现。
 
 ## 4. 关键踩坑速查（接手必读，防重蹈覆辙）
@@ -160,6 +172,9 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 | `dsh-workspace/state-snapshots/` | 可恢复快照：光标预设+关联、主题预设摘要 |
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 256m 请求体上限修复） |
 | `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表） |
+| `agents/` | workspace 指令（AGENTS.md）部署源：让**其他对话自动读到约定**，见 §8.2 |
+| `profiles/settings.example.yaml` | `$DSH_HOME/settings.yaml` 模板：默认模型 + 模型目录（含 UI 标签），**热加载** |
+| `skill/harness-git-push-skill.md` | 推送流程 Skill 部署源（模型可按需自行加载） |
 | `cursor-components/` | 可移植 React 三件套 |
 | `vendor/` | dsh-skin（修复后）、dsh-cursor（可部署成品） |
 
@@ -188,3 +203,20 @@ git sync "本次改了什么"
   不要手写这两个文件；重跑后应与 `git status` 一致（幂等）。
 - `docs/GIT-PUSH.md` 记录了双通道推送的全部配置与排错表（换机器按 §3 复现）。
 
+### 8.2 让"其他对话"自动读到约定（2026-09-14 建立并实测）
+
+跨会话传递约定不能靠聊天记录，本机用 DSH 的官方两条通道，源文件都在本仓库：
+
+| 通道 | 仓库源文件 | 部署位置 | 生效范围 |
+|---|---|---|---|
+| workspace 指令（AGENTS.md） | `agents/AGENTS.global.md` | `$DSH_HOME/AGENTS.md` | **所有**新会话 |
+| 同上 | `agents/AGENTS.workspace.md` | `/Sanfasaki/AGENTS.md` | 工作区目录树 |
+| 同上 | `agents/AGENTS.repo.md` | `/Sanfasaki/Harness/AGENTS.md` | 本仓库目录树 |
+| 技能目录 | `skill/harness-git-push-skill.md` | `$DSH_HOME/skills/harness-git-push/SKILL.md` | 会话技能目录（模型可自行加载） |
+
+- **实测**：三个 AGENTS.md 与技能文件写入后，**当前正在运行的会话立刻就收到了注入 / 技能目录即时更新**，
+  无需重启、无需刷新 —— 插件每次成功的文件系统工具调用后会重新发现。
+- 因此**新对话开箱就知道**：推送用 `git sync "信息"`、改完个性化先跑 `sync-personalization.sh`、
+  事实来源是本文档、令牌在哪、插件改动何时需要硬刷新/重启。
+- 维护提示：指令文件会占用每个会话的上下文预算（`maxBytes` 65536），保持轻量（合计约 5.6 KB），
+  细节用指针指向 `docs/`。改完记得把 `agents/` 里的源文件同步更新（它们是部署源，不是说明文档）。

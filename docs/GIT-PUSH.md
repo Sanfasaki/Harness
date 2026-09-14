@@ -3,6 +3,10 @@
 > 面向"任何一次新对话 / 任何一台新机器"：读完这一页即可正常 push。
 > 本文是可执行配置的单一说明；工具本体是 `scripts/git-push.sh` 与 `scripts/git-push-api.py`。
 
+> **新对话通常不需要读这一页**：本机已部署 workspace 指令（`$DSH_HOME/AGENTS.md` 等三层，
+> 见仓库 `agents/`）与 `harness-git-push` 技能，新会话会自动知道"推送用 `git sync`"。
+> 本文是给需要排查细节的人读的。
+
 ## 0. 一句话用法
 
 ```bash

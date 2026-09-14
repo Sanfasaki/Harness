@@ -1,6 +1,9 @@
 # Your patch layer for this dsh profile, applied after every bundle layer:
 # a top-level YAML array of loader patch entries (id-targeted config
 # overrides, disables, and insert lists; `!!js` expressions allowed).
+#
+# 本文件是"个性化 patch 模板"，开发区版本 /Sanfasaki/dsh-workspace/patches/ 为准，
+# 部署到 $DSH_HOME/profiles/web/cordis.patch.yml 后需 systemctl restart dsh.service。
 
 - insert:
     - id: dsh-skin
@@ -10,33 +13,22 @@
     - id: dsh-cursor
       name: 'dsh-cursor'
 
-# 模型目录：加入 V4.1 Flash（2026-09-10 上线，以无版本号别名 deepseek-flash 暴露）。
-# 注意 config 是整体替换：这里必须列全要保留的模型；deepseek-flash 需声明
-# inputModalities 含 image 才有图片输入能力（原生多模态）。
+# 显式声明 workspace 指令通道（AGENTS.md）为启用。
+# 说明（2026-09-14 实测）：dsh-web-app bundle 里这一行写着 disabled: true，
+# `dsh --dump-config` 也照样打印 disabled: true，但**运行时的 web 实例实际是启用的** ——
+# 写入 ~/.dsh/AGENTS.md 后，当前会话立刻收到了注入（同理 dump 里 disabled 的 tool-todo /
+# tool-web 在会话中也都在）。结论：dump-config 对 disabled 与 settings 用户层都不可信，
+# 判断运行时行为只能实测。此处显式写 false 是为了防止将来 bundle 层变化时被关掉。
+- id: agent-instructions
+  disabled: false
+
+# 模型目录与默认模型**不在这里**，而在 $DSH_HOME/settings.yaml（settings 用户层）：
+#   * 默认模型 → agent-default-model 段（provider/model/reasoningEffort）
+#   * 可选模型目录（含 UI 菜单显示名）→ llm-deepseek.models
+# 放那里的原因：llm-deepseek 支持 settings 热加载 —— 官方模块注释写明
+# "base URL, catalog, or key reaches the very next request without restarting anything"，
+# 改完下一个请求即生效，**不需要重启**；而 patch 是启动期配置，改一次就得重启一次。
+# 现成模板见仓库 profiles/settings.example.yaml。
 #
-# 本文件只负责"可选模型目录"；**默认模型不在这里**，而在 $DSH_HOME/settings.yaml 的
-# agent-default-model 段（用户层，覆盖 composition 基础层），当前值为：
-#   provider: deepseek-official / model: deepseek-flash / reasoningEffort: high
-# 提醒：`dsh --dump-config` 打印的是基础层（会显示旧值 deepseek-v4-flash），
-#       不能用它判断默认模型；改 settings.yaml 是热加载，只影响新会话。
-- id: llm-deepseek
-  config:
-    models:
-      - id: deepseek-flash
-        name: DeepSeek-V4.1-Flash
-        contextWindow: 1000000
-        inputModalities: [text, image]
-        imagePixelBudget: 640000
-        imageMaxBytes: 1048576
-      - id: deepseek-v4-flash-vision-exp
-        name: DeepSeek-V4-Flash-Vision-Exp（旧别名→V4.1）
-        contextWindow: 1000000
-        inputModalities: [text, image]
-        imagePixelBudget: 640000
-        imageMaxBytes: 1048576
-      - id: deepseek-v4-flash
-        name: DeepSeek-V4-Flash（旧别名→V4.1）
-        contextWindow: 1000000
-      - id: deepseek-v4-pro
-        name: DeepSeek-V4-Pro
-        contextWindow: 1000000
+# 历史：2026-09-10 本文件曾用 `- id: llm-deepseek / config: models:`（注意 config 是整体替换，
+# 必须列全要保留的模型）来加 V4.1 Flash；2026-09-14 迁到 settings.yaml 以消除双来源。

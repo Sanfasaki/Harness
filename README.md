@@ -20,6 +20,8 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 | [docs/DEPLOY.md](./docs/DEPLOY.md) | **部署指南：别人照读即可复刻全套**（一键/手动/验收/FAQ） |
 | [docs/HANDOFF.md](./docs/HANDOFF.md) | **交接文档：让没有上下文的模型/人直接接手本项目**（环境/踩坑/调试/未竟事项） |
 | [docs/GIT-PUSH.md](./docs/GIT-PUSH.md) | **推送指南：任何新对话/新机器照读即可 push**（双通道 `git sync`、全局配置、排错表） |
+| [agents/](./agents/README.md) | **让其他对话自动读到约定**：三层 AGENTS.md 部署源（推送方式、仓库规矩、环境事实） |
+| `profiles/settings.example.yaml` | settings 模板：默认模型 + 模型目录/UI 标签（热加载，无需重启） |
 | `install.sh` | 一键部署脚本（幂等、带备份） |
 | `scripts/git-push.sh` | 推送工具：先标准 `git push`，失败自动回退 GitHub API（内容寻址增量）。全局别名 `git sync` |
 | `scripts/sync-personalization.sh` | 个性化内容同步：开发区/线上插件/运行态 → 仓库，根治"副本陈旧"（`--check` 只体检） |

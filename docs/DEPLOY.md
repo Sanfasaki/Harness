@@ -32,6 +32,9 @@ git clone <本仓库地址> && cd Harness
 3. `package.json` 加 `dsh-skin` / `dsh-cursor` 的 `workspace:*` 依赖
 4. `pnpm-workspace.yaml` 启用 `packages/*`
 5. `pnpm install`
+6. 部署"让其他对话自动读到约定"的两条通道（`$DSH_HOME/AGENTS.md` 等三层指令 +
+   `$DSH_HOME/skills/harness-git-push/SKILL.md` 技能）；**只补不覆盖**，已存在同名文件就保留，
+   详见 §2.2 与 `agents/README.md`
 
 ## 2. 手动部署（想看清每一步时照做）
 
@@ -66,28 +69,64 @@ packages:
 cd ~/.dsh/profiles/web && pnpm install
 ```
 
-### 2.1 默认模型（`$DSH_HOME/settings.yaml`）
+### 2.1 默认模型与可选模型目录（`$DSH_HOME/settings.yaml`）
 
-新会话用哪个模型由 settings.yaml 的 `agent-default-model` 段决定（**用户层覆盖 composition 默认**）：
+**两者都写在 settings.yaml（settings 用户层），都热加载、都无需重启。**
+现成模板见 `profiles/settings.example.yaml`，可整份照抄：
 
 ```yaml
-agent-default-model:
+agent-default-model:            # 新会话用哪个模型
   provider: deepseek-official
-  model: deepseek-flash          # 无版本号滚动别名，当前 = V4.1 Flash，原生支持图片
+  model: deepseek-flash         # 无版本号滚动别名，当前 = V4.1 Flash，原生支持图片
   reasoningEffort: high
+
+llm-deepseek:                   # UI 模型菜单里能选哪些模型
+  models:
+    - id: deepseek-flash
+      name: deepseek-flash（V4.1 Flash・当前默认）   # name 就是菜单里显示的那行字
+      contextWindow: 1000000
+      inputModalities: [text, image]                # 不写 image 就没有图片输入能力
+      imagePixelBudget: 640000
+      imageMaxBytes: 1048576
+    # …旧别名与 pro 同理
 ```
 
-两个容易踩的点（都实测过）：
+为什么放 settings.yaml 而不是 patch：`llm-deepseek` 支持 settings 热加载（官方模块注释：
+*"base URL, catalog, or key reaches the very next request without restarting anything"*），
+改了下一个请求就生效；而 `cordis.patch.yml` 是启动期配置，**改一次要重启一次**。
 
-- **`dsh --dump-config` 显示的不是它。** dump 输出的是 composition/基础层（本机是旧值
-  `deepseek-v4-flash`），settings.yaml 作为用户层在运行时覆盖它。判断默认模型要读 `settings.yaml`，
-  或看 `dsh-agent-default-model` 的 `scope.get()` 合并结果，**不能看 dump-config**。
-- **已在运行的长会话不跟着变**：会话模型在创建时确定，改 settings.yaml 只影响新会话。
-  想让当前会话换标签，用 UI 模型下拉框重选。settings.yaml 是热加载的（`watch: true`），不必重启。
+三个容易踩的点（都实测过）：
 
-模型名要出现在 `llm-deepseek` 的 `models` 目录里（见 `patches/web-profile-cordis.patch.yml`，
-注意该 `config` 是**整体替换**，列不全就会把其它模型挤掉；带图片能力的条目必须声明
-`inputModalities: [text, image]`）。
+- **`dsh --dump-config` 显示的不是 settings 层**：dump 只反映 composition/基础层（默认模型会显示旧值
+  `deepseek-v4-flash`，`agent-instructions` 还会显示 `disabled: true` 而运行时其实启用）。
+  判断运行时行为要读 `settings.yaml` 或直接实测。
+- **已在运行的长会话不跟着变**：会话模型在创建时确定，改 `agent-default-model` 只影响新会话；
+  想让当前会话换标签，用 UI 模型菜单重选。模型**目录与标签**则会即时刷新（重开菜单即可看到）。
+- **标签（`name`）建议以模型 id 开头**：菜单里只有 `name` 可读，写成纯中文说明就看不出该选哪个 id。
+
+改完 settings.yaml 的自检方式（不动运行中的服务）：
+
+```sh
+dsh --profile headless "只回复两个字母：OK"    # 真起一个 DSH 进程：settings 非法会 boot fail、
+                                              # 目录 schema 错会告警、默认模型不可用会直接报错
+```
+
+
+### 2.2 让"其他对话"自动读到约定（强烈建议）
+
+DSH 从文件系统加载两类"给模型看的"内容，部署后**新会话开箱就知道**本项目的规矩
+（推送用 `git sync`、改完个性化先同步、令牌在哪、何时要硬刷新/重启）：
+
+| 内容 | 部署位置 | 生效范围 |
+|---|---|---|
+| `agents/AGENTS.global.md` | `$DSH_HOME/AGENTS.md` | **所有**会话（任意工作目录） |
+| `agents/AGENTS.workspace.md` | 你的工作区根（如 `/Sanfasaki/AGENTS.md`） | 该目录树 |
+| `agents/AGENTS.repo.md` | 仓库根（如 `/Sanfasaki/Harness/AGENTS.md`） | 仓库目录树 |
+| `skill/harness-git-push-skill.md` | `$DSH_HOME/skills/harness-git-push/SKILL.md` | 会话技能目录（模型按需加载） |
+
+`install.sh` 第 6 步会补齐它们（已存在则跳过，不会覆盖你自己的约定）。
+注意两点：**写入即生效、无需重启**；且**不要**用 `dsh --dump-config` 判断该通道是否开启 ——
+dump 会显示 `agent-instructions: disabled: true`，但实测运行时是启用的（见 `agents/README.md`）。
 
 ## 3. 重启生效
 

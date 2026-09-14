@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# DSH 外观个性化一键部署：安装 dsh-skin（含本地修复）+ dsh-cursor 到指定 profile。
+# DSH 外观个性化一键部署：安装 dsh-skin（含本地修复）+ dsh-cursor 到指定 profile，
+# 并补齐"让其他对话自动读到约定"的 workspace 指令与推送 Skill（只补不覆盖）。
 # 用法: ./install.sh [profile名]    默认 web
 # 要求: dsh web profile 已初始化过（$DSH_HOME/profiles/web 存在）、pnpm 可用。
 # 幂等：重复执行安全；每个改动文件都有 .dsh-deploy.bak 备份。
@@ -92,6 +93,36 @@ fi
 # 5) 安装
 echo "==> 在 $PROFILE_DIR 执行 pnpm install ..."
 (cd "$PROFILE_DIR" && pnpm install)
+
+# 6) 部署"让其他对话自动读到约定"的两条通道（AGENTS.md 指令 + 推送 Skill）
+#    只补不覆盖：已存在同名文件时保留用户自己的版本，避免盖掉别人的约定。
+install_if_absent() {
+  local src="$1" dst="$2" label="$3"
+  if [ ! -f "$src" ]; then return 0; fi
+  if [ -e "$dst" ]; then
+    echo "==> 跳过 $label（已存在，保留现有内容）：$dst"
+  else
+    mkdir -p "$(dirname "$dst")"
+    install -m644 "$src" "$dst"
+    echo "==> 已部署 $label：$dst"
+  fi
+}
+install_if_absent "$SCRIPT_DIR/agents/AGENTS.global.md"    "$DSH_HOME_DIR/AGENTS.md"  "全局 workspace 指令"
+install_if_absent "$SCRIPT_DIR/agents/AGENTS.workspace.md" "/Sanfasaki/AGENTS.md"    "工作区指令"
+install_if_absent "$SCRIPT_DIR/agents/AGENTS.repo.md"      "/Sanfasaki/Harness/AGENTS.md" "仓库指令"
+install_if_absent "$SCRIPT_DIR/skill/harness-git-push-skill.md" \
+                  "$DSH_HOME_DIR/skills/harness-git-push/SKILL.md" "推送 Skill"
+echo "    提示：这两条通道让新会话自动知道'推送用 git sync'，详见 agents/README.md"
+
+# 7) settings 模板（默认模型 agent-default-model + 模型目录 llm-deepseek），不覆盖现有 settings.yaml
+if [ -f "$SCRIPT_DIR/profiles/settings.example.yaml" ]; then
+  install -m644 "$SCRIPT_DIR/profiles/settings.example.yaml" "$DSH_HOME_DIR/settings.example.yaml"
+  echo "==> 已放置 settings 模板：$DSH_HOME_DIR/settings.example.yaml"
+  if [ -f "$DSH_HOME_DIR/settings.yaml" ] && ! grep -q '^llm-deepseek:' "$DSH_HOME_DIR/settings.yaml"; then
+    echo "    提示：$DSH_HOME_DIR/settings.yaml 里还没有 llm-deepseek 段（模型目录/UI 标签）。"
+    echo "          可照模板自行合并；settings.yaml 是热加载的，改完无需重启（见 docs/DEPLOY.md §2.1）"
+  fi
+fi
 
 cat <<EOF
 
