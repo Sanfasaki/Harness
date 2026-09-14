@@ -22,6 +22,9 @@
 5. **令牌与密钥永不入库**：凭据在 `~/.git-credentials` / `~/.dsh/github-token`（600）。
    提交前可用 `grep -rn "ghp_" . --exclude-dir=.git` 自查。
 6. **推送用 `git sync "信息"`**（双通道，链路不通自动走 API 兜底）；细节见 `docs/GIT-PUSH.md`。
+7. **改客户端插件代码必须先跑冒烟测试**：`node dsh-workspace/plugins/dsh-cursor/test/client-smoke.cjs`
+   （真执行 bundle 断言光标跟随等行为）。`node --check` 只查语法，作用域/属性覆盖这类问题它查不出 ——
+   本仓库已经因此两次把"光标卡在屏幕左上角"推上线。部署后建议再对服务端 bundle 跑一次同名测试。
 
 ## 改 DSH 插件时的验证要点
 

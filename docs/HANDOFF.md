@@ -164,6 +164,14 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
        而 `mouseover` 移动时几乎不停触发 → **光标被钉死在屏幕左上角**。
        现在只有 `applyCursorTransform()` 一个生成点，其它地方走 `placeCursor()` / `setHoverScale()`。
        教训：同一元素上同一属性的多个写入方 = 定时炸弹，改成"单一生成点 + 语义化 setter"。
+    ⑤ **更隐蔽的一次同症状翻车：作用域错位**。`state` / `cursorEl` 声明在 `apply(ctx)` 内部
+       （6 空格缩进），而新加的辅助函数被插到了工厂作用域（4 空格）→ `applyCursorTransform()` 里
+       `cursorEl` 是未声明变量 → **每次 mousemove 抛 ReferenceError** → transform 停在 cssText 初始值
+       `translate3d(0,0,0)` → 又是"卡左上角"，且 init 还会走兜底 `console.error`。
+       `node --check` 只查语法，**完全查不出这类问题**。
+       ⇒ 定下硬规矩：**客户端插件改动必须先过 `dsh-workspace/plugins/dsh-cursor/test/client-smoke.cjs`**
+       （最小 DOM 桩真跑一遍 bundle，断言光标跟随/悬停缩放不抹位置/拖尾点在鼠标处/无 console.error；
+       已用历史 bug 版本验证过它确实会失败报 `ReferenceError: cursorEl is not defined`）。
 12. **本沙箱网络**：`github.com` git 协议**不通**（clone/push 超时）；HTTP 端点
     （registry.npmjs.org / codeload.github.com / raw.githubusercontent.com / api.github.com）
     通但**偶发不稳**，失败即重试。装 GitHub 插件用 codeload tarball + 本地路径 add；
@@ -217,10 +225,20 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 ### 8.1 推送与同步命令（两条命令覆盖全部日常维护）
 
 ```bash
-# ① 把"个性化"三处来源收进仓库（开发区 / 线上插件 / 运行态）
+# ① 改了客户端插件代码 → 先过冒烟测试（真跑 bundle，不是只查语法）
+node dsh-workspace/plugins/dsh-cursor/test/client-smoke.cjs        # 期望：全部通过
+node dsh-workspace/plugins/dsh-cursor/test/client-smoke.cjs <client.js>   # 也可指定文件
+# ② 把"个性化"三处来源收进仓库（开发区 / 线上插件 / 运行态）
 bash scripts/sync-personalization.sh          # 加 --check 只体检不写入
-# ② 提交并推送（自动双通道，git 不通时回退 GitHub API）
+# ③ 提交并推送（自动双通道，git 不通时回退 GitHub API）
 git sync "本次改了什么"
+```
+
+部署后还可以对着**服务端实际吐出的 bundle** 再验一次（等于端到端）：
+
+```bash
+curl -s http://127.0.0.1:3080/plugins/dsh-cursor/client.js -o /tmp/live.js
+node dsh-workspace/plugins/dsh-cursor/test/client-smoke.cjs /tmp/live.js
 ```
 
 - `sync-personalization.sh` 解决的是**副本陈旧**这个历史顽疾（曾两次导致仓库里的插件代码落后于线上：

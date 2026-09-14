@@ -39,7 +39,7 @@ for plug in dsh-skin dsh-cursor; do
   if [ ! -d "$src" ]; then echo "跳过 $plug（未安装于 $PKGS）"; continue; fi
   mkdir -p "$dst"
   rsync "${rsync_flags[@]}" --exclude .dsh-deploy.bak --exclude node_modules/ \
-        --include 'lib/***' --include 'package.json' --exclude '*' "$src/" "$dst/"
+        --include 'lib/***' --include 'test/***' --include 'package.json' --exclude '*' "$src/" "$dst/"
   [ "$CHECK" -eq 1 ] || echo "已同步 $plug -> vendor/$plug"
   dev_copy="$WS_DEV/plugins/$plug"
   if [ -d "$dev_copy" ]; then

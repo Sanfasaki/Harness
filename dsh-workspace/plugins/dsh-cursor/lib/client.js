@@ -45,121 +45,6 @@ window.__ModuleLoader__.load({
     var MAX_TRAIL = 12;
     var MAX_RIPPLE = 12;
     var TRAIL_THROTTLE = 16; // ms
-
-    // ── 图片本地缓存 ──
-    // 光标图片是"服务器 URL + cache-control:no-store"，任何一次重新应用都要回服务器拿，
-    // 于是断网 / 服务器重启后光标就消失（而 dsh-skin 把壁纸存成 data URL，所以背景不受影响）。
-    // 这里首次取到后转 data URL 存 localStorage，渲染时优先用它：离线可用、重新应用零延迟。
-    var IMG_CACHE_PREFIX = "dsh-cursor-img:";
-    function cacheGet(url) {
-      try { return localStorage.getItem(IMG_CACHE_PREFIX + url) || null; } catch (e) { return null; }
-    }
-    function cachePut(url, dataUrl) {
-      if (!url || !dataUrl || url.indexOf("data:") === 0) return;
-      try {
-        localStorage.setItem(IMG_CACHE_PREFIX + url, dataUrl);
-      } catch (e) {
-        // 配额满：清掉本插件自己的缓存条目再试一次（不动其它 key）
-        try {
-          for (var i = localStorage.length - 1; i >= 0; i--) {
-            var k = localStorage.key(i);
-            if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) localStorage.removeItem(k);
-          }
-          localStorage.setItem(IMG_CACHE_PREFIX + url, dataUrl);
-        } catch (e2) { /* 空间仍不够就放弃，不影响主流程 */ }
-      }
-    }
-    // 本插件缓存了多少张图 / 清空（面板上用）
-    function imgCacheCount() {
-      var n = 0;
-      try {
-        for (var i = 0; i < localStorage.length; i++) {
-          var k = localStorage.key(i);
-          if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) n++;
-        }
-      } catch (e) {}
-      return n;
-    }
-    function clearImgCache() {
-      var n = 0;
-      try {
-        for (var i = localStorage.length - 1; i >= 0; i--) {
-          var k = localStorage.key(i);
-          if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) { localStorage.removeItem(k); n++; }
-        }
-      } catch (e) {}
-      return n;
-    }
-    // 渲染用地址：本地有缓存就用缓存，否则用原 URL
-    function renderUrl(url) {
-      if (!url || url.indexOf("data:") === 0) return url;
-      return cacheGet(url) || url;
-    }
-    // 把 URL 图转 data URL 存本地（已有缓存则跳过）
-    function cacheImage(url) {
-      if (!url || url.indexOf("data:") === 0 || cacheGet(url)) return;
-      fetch(url).then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.blob();
-      }).then(function (blob) {
-        return new Promise(function (resolve, reject) {
-          var fr = new FileReader();
-          fr.onload = function () { resolve(fr.result); };
-          fr.onerror = reject;
-          fr.readAsDataURL(blob);
-        });
-      }).then(function (dataUrl) { cachePut(url, dataUrl); }).catch(function () {});
-    }
-    // 预解码：主题切换时直接能画，不用现场解码大图（紫罗兰 PNG 有 450KB）
-    function warmImage(url) {
-      if (!url) return;
-      var img = new Image();
-      img.src = renderUrl(url);
-      if (img.decode) { try { img.decode().catch(function () {}); } catch (e) {} }
-    }
-    // 预热"当前光标 + 所有关联主题的预设"：这两类最可能被重新应用，也最影响体感
-    function warmImages() {
-      if (state.imageUrl) { cacheImage(state.imageUrl); warmImage(state.imageUrl); }
-      var list = state.presets || [];
-      for (var i = 0; i < list.length; i++) {
-        var p = list[i];
-        if (p && p.linkTheme && p.imageUrl) { cacheImage(p.imageUrl); warmImage(p.imageUrl); }
-      }
-    }
-    // 主题过渡期间不要切光标：dsh-skin 会给 <html> 挂 .dsh-skin-transition 约 720ms，
-    // 那时整页在重绘颜色，再叠一次换图/解码就是肉眼可见的卡顿。
-    // 注意时序：皮肤是"先广播事件、后加过渡类"，所以先等 80ms 再开始轮询。
-    function whenThemeIdle(cb) {
-      var t0 = performance.now();
-      function poll() {
-        var root = document.documentElement;
-        var busy = root && root.classList.contains("dsh-skin-transition");
-        if (!busy || performance.now() - t0 > 3000) { cb(); return; }
-        setTimeout(poll, 120);
-      }
-      setTimeout(poll, 80);
-    }
-
-    // 光标定位改用 transform: translate3d()（合成器动画，不触发 layout）。
-    // 注意：位置与"悬停放大"必须共用**同一条** transform —— 只写一半就会把位置打回原点。
-    // 曾经 onOver 单独写 translate(-50%,-50%) scale(k)，直接把 translate3d(位置) 抹掉，
-    // 表现为"光标卡在屏幕左上角不动"（mouseover 移动时几乎不停触发）。
-    // 因此这里只保留一个生成点 applyCursorTransform()，其它地方一律走 placeCursor/setHoverScale。
-    var lastX = 0, lastY = 0, hoverScale = 1;
-    function applyCursorTransform() {
-      if (!cursorEl) return;
-      cursorEl.style.transform = "translate3d(" + lastX + "px," + lastY + "px,0)"
-        + " translate(-50%,-50%) scale(" + hoverScale + ")";
-    }
-    function placeCursor(x, y) {
-      lastX = x; lastY = y;
-      applyCursorTransform();
-    }
-    function setHoverScale(k) {
-      hoverScale = k;
-      applyCursorTransform();
-    }
-
     function loadState() {
       try {
         var raw = localStorage.getItem(STORE_KEY);
@@ -209,6 +94,120 @@ window.__ModuleLoader__.load({
       var styleEl = null;    // cursor:none 注入
       var uiStyle = null;
       var cursorEl = null;   // 光标图片元素（z-index 2147483001，高于 dsh-skin 面板 2147483000）
+
+      // ── 图片本地缓存 ──
+      // 光标图片是"服务器 URL + cache-control:no-store"，任何一次重新应用都要回服务器拿，
+      // 于是断网 / 服务器重启后光标就消失（而 dsh-skin 把壁纸存成 data URL，所以背景不受影响）。
+      // 这里首次取到后转 data URL 存 localStorage，渲染时优先用它：离线可用、重新应用零延迟。
+      var IMG_CACHE_PREFIX = "dsh-cursor-img:";
+      function cacheGet(url) {
+        try { return localStorage.getItem(IMG_CACHE_PREFIX + url) || null; } catch (e) { return null; }
+      }
+      function cachePut(url, dataUrl) {
+        if (!url || !dataUrl || url.indexOf("data:") === 0) return;
+        try {
+          localStorage.setItem(IMG_CACHE_PREFIX + url, dataUrl);
+        } catch (e) {
+          // 配额满：清掉本插件自己的缓存条目再试一次（不动其它 key）
+          try {
+            for (var i = localStorage.length - 1; i >= 0; i--) {
+              var k = localStorage.key(i);
+              if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) localStorage.removeItem(k);
+            }
+            localStorage.setItem(IMG_CACHE_PREFIX + url, dataUrl);
+          } catch (e2) { /* 空间仍不够就放弃，不影响主流程 */ }
+        }
+      }
+      // 本插件缓存了多少张图 / 清空（面板上用）
+      function imgCacheCount() {
+        var n = 0;
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) n++;
+          }
+        } catch (e) {}
+        return n;
+      }
+      function clearImgCache() {
+        var n = 0;
+        try {
+          for (var i = localStorage.length - 1; i >= 0; i--) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(IMG_CACHE_PREFIX) === 0) { localStorage.removeItem(k); n++; }
+          }
+        } catch (e) {}
+        return n;
+      }
+      // 渲染用地址：本地有缓存就用缓存，否则用原 URL
+      function renderUrl(url) {
+        if (!url || url.indexOf("data:") === 0) return url;
+        return cacheGet(url) || url;
+      }
+      // 把 URL 图转 data URL 存本地（已有缓存则跳过）
+      function cacheImage(url) {
+        if (!url || url.indexOf("data:") === 0 || cacheGet(url)) return;
+        fetch(url).then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.blob();
+        }).then(function (blob) {
+          return new Promise(function (resolve, reject) {
+            var fr = new FileReader();
+            fr.onload = function () { resolve(fr.result); };
+            fr.onerror = reject;
+            fr.readAsDataURL(blob);
+          });
+        }).then(function (dataUrl) { cachePut(url, dataUrl); }).catch(function () {});
+      }
+      // 预解码：主题切换时直接能画，不用现场解码大图（紫罗兰 PNG 有 450KB）
+      function warmImage(url) {
+        if (!url) return;
+        var img = new Image();
+        img.src = renderUrl(url);
+        if (img.decode) { try { img.decode().catch(function () {}); } catch (e) {} }
+      }
+      // 预热"当前光标 + 所有关联主题的预设"：这两类最可能被重新应用，也最影响体感
+      function warmImages() {
+        if (state.imageUrl) { cacheImage(state.imageUrl); warmImage(state.imageUrl); }
+        var list = state.presets || [];
+        for (var i = 0; i < list.length; i++) {
+          var p = list[i];
+          if (p && p.linkTheme && p.imageUrl) { cacheImage(p.imageUrl); warmImage(p.imageUrl); }
+        }
+      }
+      // 主题过渡期间不要切光标：dsh-skin 会给 <html> 挂 .dsh-skin-transition 约 720ms，
+      // 那时整页在重绘颜色，再叠一次换图/解码就是肉眼可见的卡顿。
+      // 注意时序：皮肤是"先广播事件、后加过渡类"，所以先等 80ms 再开始轮询。
+      function whenThemeIdle(cb) {
+        var t0 = performance.now();
+        function poll() {
+          var root = document.documentElement;
+          var busy = root && root.classList.contains("dsh-skin-transition");
+          if (!busy || performance.now() - t0 > 3000) { cb(); return; }
+          setTimeout(poll, 120);
+        }
+        setTimeout(poll, 80);
+      }
+
+      // 光标定位改用 transform: translate3d()（合成器动画，不触发 layout）。
+      // 注意：位置与"悬停放大"必须共用**同一条** transform —— 只写一半就会把位置打回原点。
+      // 曾经 onOver 单独写 translate(-50%,-50%) scale(k)，直接把 translate3d(位置) 抹掉，
+      // 表现为"光标卡在屏幕左上角不动"（mouseover 移动时几乎不停触发）。
+      // 因此这里只保留一个生成点 applyCursorTransform()，其它地方一律走 placeCursor/setHoverScale。
+      var lastX = 0, lastY = 0, hoverScale = 1;
+      function applyCursorTransform() {
+        if (!cursorEl) return;
+        cursorEl.style.transform = "translate3d(" + lastX + "px," + lastY + "px,0)"
+          + " translate(-50%,-50%) scale(" + hoverScale + ")";
+      }
+      function placeCursor(x, y) {
+        lastX = x; lastY = y;
+        applyCursorTransform();
+      }
+      function setHoverScale(k) {
+        hoverScale = k;
+        applyCursorTransform();
+      }
       var root = null;
       var fab = null;
       var panel = null;

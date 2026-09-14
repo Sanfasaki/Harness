@@ -18,5 +18,8 @@
   "files": [
     "lib"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "node test/client-smoke.cjs"
+  }
 }
