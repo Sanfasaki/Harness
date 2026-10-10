@@ -35,6 +35,11 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 `github.com/Sanfasaki/Harness`；默认模型为 `deepseek-flash`（新会话生效；已在运行会话是创建时取的旧别名，
 两者实际同一模型）。
 
+**2026-10-10 追加：本机主线已并入 DSH 0.2 + 两个新能力。** 本机（Windows）主线从 0.1.5 升到
+**0.2.0-rc.2**，美化插件与 **computer-use**（本地桌面操作）/**browser-use**（网页操作）合并进同一个
+profile **`web2`**，端口仍是 3080、会话沿用；老 profile `web` 原封不动可回退。
+完整布局与安装步骤见 **`docs/WINDOWS-LOCAL.md`**；0.2 专属踩坑见 §4 第 13–16 条。
+
 ## 1. 环境事实（命令可直接用）
 
 | 项 | 值 |
@@ -52,6 +57,23 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 **生效规则**：客户端 bundle 内容改动 → 复制到 profile `packages/<插件>/lib/` → 浏览器**强刷**即可
 （rev=内容哈希 + `cache-control:no-cache`）；宿主代码（`lib/index.js`）或**新增插件** → 需重启服务。
 `settings.yaml` 有 chokidar 监听，改配置**热载无需重启**。
+
+### 1.1 本机主线（Windows）：DSH 0.2 + profile `web2`（2026-10-10）
+
+| 项 | 值 |
+|---|---|
+| DSH 代码 | `C:\AIART\dsh-0.2`（0.2.0-rc.2，独立安装，不是全局 npm） |
+| DSH_HOME | `C:\Users\30391\.dsh`（= 本文档其余处的 `$DSH_HOME`，会话/状态/壁纸全部沿用） |
+| 启动 profile | `web2` = 美化（dsh-skin + dsh-cursor）+ computer-use + browser-use |
+| 端口 / URL | 3080（不变） |
+| 启动脚本 | `C:\AIART\start-dsh-web.bat`；回退入口 `start-dsh-web-0.1.5.bat` |
+| 客户端插件副本 | `C:\Users\30391\.dsh\profiles\web2\packages\{dsh-skin,dsh-cursor}`（`workspace:*`） |
+| 本机环境速查 | `C:\AIART\dsh-cu-README.md`（两套环境对照 / 限制 / 回滚） |
+| 归并前整份备份 | `C:\Users\30391\.dsh-backup-20261010` |
+
+**为什么新建 profile 而不是就地改 `web`**：0.2 首次启动会把 `$DSH_HOME/settings.yaml` **导入**并改名
+`settings.yaml.imported`，还会把 `$DSH_HOME/skills` 转成 Junction。老 profile 一个字节不动，
+回退只需换脚本（或只换 profile 名）。
 
 ## 2. 已安装插件与功能
 
@@ -94,6 +116,61 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
   断网/服务器重启不丢光标）；光标与拖尾点用 **`transform: translate3d()` 移动**（不再 left/top 触发 layout）；
   光标/拖尾/波纹带 **`data-dsh-cursor-layer`** 标记，dsh-skin 的全局颜色过渡会跳过它们；
   预设图**预解码**，切主题时的光标切换**延后到过渡结束**（详见 §4 第 10、11 条）
+
+### computer-use（insert 行 `computer-use` + `computer-use-cua-driver-native`）
+
+- 包：`@deepseek-ai/dsh-computer-use` + `@deepseek-ai/dsh-experimental-computer-use-cua-driver-native`
+- 上游 `@trycua/cua-driver@0.28.0`（Windows x64 原生库随包落地）
+- 工具前缀 `cua_driver_native__`，**共 55 个**：观察（`get_accessibility_tree` / `get_window_state` /
+  `get_desktop_state` / `list_apps` / `list_windows` / `get_screen_size` / `zoom` / `verify_state`）、
+  操作（`click` / `double_click` / `right_click` / `type_text` / `set_value` / `press_key` / `hotkey` /
+  `scroll` / `drag` / `invoke_menu` / `bring_to_front` / `set_window_frame` / `launch_app` / `kill_app`）、
+  剪贴板、代理光标、录制回放、浏览器子集
+- **实测**：`get_accessibility_tree` 读回真实桌面（30 个可见窗口 / 562 进程）
+- 限制：一个部署只能挂**一个**提供方；**不占用桌面**（并发会话操作同一张桌面，协调责任在调用方）；
+  取消不撤销已发出的输入；native 与主进程**同进程**，原生崩溃可能带走 DSH，失败时还会占住注册名额
+  （**必须重启才能换提供方**）
+
+### browser-use（insert 行 `browser-use` + `browser-use-playwright-mcp`）
+
+- 包：`@deepseek-ai/dsh-browser-use` + `@deepseek-ai/dsh-experimental-browser-use-playwright-mcp`
+- 上游 `@playwright/mcp@0.0.80`；工具前缀 `mcp__playwright-mcp__`，**共 23 个**
+  （`browser_snapshot` 走无障碍树，**不需要视觉模型**；vision 是可选能力位 `--caps vision`）
+- 本机只装了 Edge、没有 Chrome → 必须显式指定 `executablePath` 指 Edge；
+  **不要**改用 Chrome DevTools MCP（那个才需要 Chrome）
+  ```yaml
+  config:
+    mode: launch
+    headless: false      # 想静默改 true
+    executablePath: 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+  ```
+- 截图需要「挂载附件存储 + 声明支持图片输入的模型路由」；不支持图像的模型**不报错**，只是拿不到截图
+
+### 0.2 迁移：客户端 DOM class 必须重新标定（2026-10-10）
+
+0.2 的 CSS-module class 名变了，美化插件里写死的选择器**逐个实测重标**，
+否则表现是"插件在线但壁纸/气泡不生效"（清单里有插件、页面却看不到效果）：
+
+| 槽位 | 0.1.5 | 0.2（现用，新旧并列） |
+|---|---|---|
+| 输出列 | `.EvIC1a_column` | `html body .EvIC1a_column, html body .Md3f7G_column` |
+| 气泡 | `.Sixlwa_bubble` | `html body .Sixlwa_bubble, html body .gdEzaW_bubble` |
+| 视频气泡目标 | `.Sixlwa_bubble` | `.Sixlwa_bubble, .gdEzaW_bubble` |
+
+`wallpaper: html body`、`sidebar`（`.pI_x6G_sidebarCol` / `.hHd-Xa_root`）、`chat`（`.wSkVaW_root`）、
+`input`（`.uV2eYG_card`）**未变**。改法一律"新 class 与旧 class 并列"，两个版本都能跑；
+代码位置 `vendor/dsh-skin/lib/client.js`（`SLOT_SELECTORS` / `VIDEO_TARGET`）与 `vendor/dsh-cursor/lib/client.js`。
+
+### dsh-cursor 圆角：必须显式 `corner-shape: round`（2026-10-10）
+
+- **现象**：光泽波纹与拖尾点渲染成**圆角方块**，不是圆。
+- **真因**：本机浏览器环境在运行时给元素注入了 `corner-shape: superellipse(1.5)`——
+  `superellipse(1.5)` 的渲染形状**就是圆角方形**，`round` 才是圆。DSH 自己的文件里**没有**这个属性
+  （全量搜 `node_modules` 零命中），属环境注入，所以**服务器上不会复现**。
+- **易误判点**：`border-radius` 的 computed 值始终是 `50%`，**拿它判断形状是无效指标**——
+  `corner-shape` 只改渲染形状，不改 `border-radius` 的值。
+- **修法**（版本无关、对注入免疫）：建元素时用**内联 `!important`** 把 `corner-shape` 及四个长写属性
+  钉成 `round` —— `dsh-cursor` 里的 `forceRoundCorners()`，在 `makeTrailDot()` / `makeRippleEl()` 调用。
 
 ## 3. 模型与会话
 
@@ -199,6 +276,19 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
     （registry.npmjs.org / codeload.github.com / raw.githubusercontent.com / api.github.com）
     通但**偶发不稳**，失败即重试。装 GitHub 插件用 codeload tarball + 本地路径 add；
     推仓库用 **GitHub Git Data API**（blob→tree→commit→ref，先建引导提交）。
+13. **0.2 里 `--profile <name>` 后面不要再补 `web` 子命令**（2026-10-10 实测报错）：
+    `dsh --profile web2 web` → `error: too many arguments. Expected 0 arguments but got 1: web.` 直接退出。
+    0.2 的 `--profile <name>` **本身就是"启动该 profile 的应用"**；`dsh web` / `dsh tui` 这种写法
+    只在用内置同名 profile 时成立。正确写法：`dsh --profile web2 --port 3080 --no-open`。
+    另外 `--profile` 是**全局参数**（在子命令之前），`web --help` 也证明它自带 web 选项。
+14. **`dsh plugin --profile X add <pkg>` 不会把包变成 profile 层**：它只装成普通依赖，
+    日志会警告 `declares no dsh.bundle`，插件**不会被挂载**。必须手写 `cordis.patch.yml` 的 `- insert:` 条目；
+    验证挂没挂上用 `dsh --profile X --dump-config`（能看到该 id 才算挂上）。
+15. **`corner-shape` 环境注入**（圆角方块）见 §2 专节：**不要**用 `border-radius` 的 computed 值
+    判断形状，它永远是 `50%`；修法是内联 `!important` 的 `corner-shape: round`。
+16. **客户端清单里看不到 computer-use / browser-use，这是正常的**：它们是 **host 侧**插件，
+    工具经模型工具列表暴露（`cua_driver_native__*` / `mcp__playwright-mcp__*`），不产出 client bundle。
+    判断"挂没挂上"看 `--dump-config` 与会话里的工具列表，别去 `/plugins/??...` 清单里找。
 
 ## 5. 调试方法
 
@@ -212,6 +302,12 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 ## 6. 未竟事项 / 候选方向
 
 - [x] 用 vision-exp 实测多模态——**已完成**（本会话 read_image 读图成功，模型切换/默认均生效）
+- [x] **DSH 0.2 归并**（2026-10-10）：美化 + computer-use + browser-use 合进本机主线 profile `web2`，
+  3080 端口与会话不变，老 profile `web` 可回退 —— 详见 `docs/WINDOWS-LOCAL.md`
+- [ ] **归并后重启 3080**，在当前会话真的调一次 `cua_driver_native__*` / `mcp__playwright-mcp__*`
+  （工具列表里出现即挂载成功；`--dump-config` 已确认 6 个插件都在合成配置树里）
+- [ ] 圆角方块的**注入来源**仍未锁定（怀疑浏览器扩展/环境，非 DSH 文件）；修法是免疫式
+  `corner-shape: round`。若哪天服务器端也复现，按本文档 §2 专节排查
 - [ ] dsh-skin 的 persist 修复值得提**上游 PR**（wei-806206088/dsh-skin）
 - [ ] dsh-cursor 扩展：更多效果/预设/与 dsh-skin 面板合并的选项（待用户需求）
 - [ ] 模型切换后图片类任务可对话完成，`docs/DEPLOY.md` 与仓库流程可据此再简化（可选）
@@ -220,6 +316,7 @@ DSH `web` profile 已装 **dsh-skin**（主题皮肤：换肤/预设/自动切�
 
 | 文件 | 内容 |
 |---|---|
+| `docs/WINDOWS-LOCAL.md` | **本机（Windows）主线：DSH 0.2 + profile `web2` 布局、两个新能力的安装与验收、回退** |
 | `docs/DEPLOY.md` | **新机器部署指南**（一键/手动/nginx/验收/FAQ） |
 | `README.md` | 仓库总览与功能速览 |
 | `skill/dsh-appearance-personalization-skill.md` | DSH 外观实战 Skill（机制+全部踩坑） |

@@ -22,7 +22,9 @@ window.__ModuleLoader__.load({
     ];
     var REGION_SELECTORS = {
       workspace: "html body .hHd-Xa_root",
-      output: "html body .Md3f7G_column",
+      // 0.2.x：输出列哈希类名由 Md3f7G_column 变为 EvIC1a_column（dsh-client-ui-chat）。
+      // 并列保留旧名，使同一份插件同时兼容 0.1.5 与 0.2.x。
+      output: "html body .EvIC1a_column, html body .Md3f7G_column",
       input: "html body .uV2eYG_card"
     };
 
@@ -46,7 +48,10 @@ window.__ModuleLoader__.load({
       sidebar: ["html body .pI_x6G_sidebarCol", "html body .hHd-Xa_root"],
       chat: ["html body .wSkVaW_root"],
       input: ["html body .uV2eYG_card"],
-      bubble: ["html body .gdEzaW_bubble"]
+      // 0.2.x：消息气泡哈希类名由 gdEzaW_bubble 变为 Sixlwa_bubble
+      // （dsh-client-ui-chat 的 MessageItem.module.css，背景 var(--dsw-specific-bubble)）。
+      // 其余槽位（wallpaper/sidebar/chat/input）哈希未变，无需改。
+      bubble: ["html body .Sixlwa_bubble", "html body .gdEzaW_bubble"]
     };
     var SLOT_VEIL = {
       wallpaper: "var(--dsh-skin-veil-chat)",
@@ -61,7 +66,7 @@ window.__ModuleLoader__.load({
       sidebar: ".pI_x6G_sidebarCol",
       chat: ".wSkVaW_root",
       input: ".uV2eYG_card",
-      bubble: ".gdEzaW_bubble"
+      bubble: ".Sixlwa_bubble, .gdEzaW_bubble"
     };
     var VIDEO_EXT = /\.(mp4|webm|ogg|ogv|mov|m4v)([?#].*)?$/i;
     function isVideoUrl(url) {

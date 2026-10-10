@@ -190,3 +190,33 @@ Harness/
 
 > 提示：`dsh-workspace/third-party/` 下的上游克隆不入库；`vendor/dsh-skin` 即
 > 上游 + 本地修复（persist 防抖串行 / 自动切换 / 三段式过渡）的最终可部署版本。
+
+## 8. Windows 本机部署（DSH 0.2 + computer-use / browser-use，2026-10-10）
+
+上面的流程假设 Linux 服务器（systemd + nginx）。本机（Windows）走的是另一条线，
+**完整步骤、验收命令与回退方式见 `docs/WINDOWS-LOCAL.md`**，这里只放和本文档不同的要点：
+
+| 差异点 | Linux 服务器 | Windows 本机 |
+|---|---|---|
+| 服务方式 | systemd `dsh.service` | 双击 `start-dsh-web.bat`（`node --expose-internals bin.js`） |
+| DSH 版本 | 0.1.5-rc.1（npx 缓存） | **0.2.0-rc.2**（`C:\AIART\dsh-0.2` 独立安装） |
+| profile | `web` | **`web2`**（美化 + 两个新能力），老 `web` 保留可回退 |
+| 公网入口 | nginx :8080（自签 https + basic auth） | 无，仅 `127.0.0.1:3080`（token 在启动窗口里） |
+| 启动参数 | `dsh web` | `--profile web2 --port 3080 --no-open`（**别补 `web` 子命令**） |
+| 原生模块 | 直接编译 | npm 11 拦截 install 脚本，需 `npm install-scripts approve <pkg>` + `npm rebuild` |
+
+两个新能力的包与插入行（`profiles/<profile>/cordis.patch.yml`）：
+
+```yaml
+- insert: computer-use
+- insert: computer-use-cua-driver-native
+- insert: browser-use
+- insert: browser-use-playwright-mcp
+  config:
+    mode: launch
+    headless: false
+    executablePath: 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+```
+
+> ⚠️ `dsh plugin --profile X add <pkg>` **不会**把这些包挂进 profile（只装成普通依赖），
+> `cordis.patch.yml` 的 `- insert:` 必须手写；用 `dsh --profile X --dump-config` 确认。

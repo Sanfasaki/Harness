@@ -391,6 +391,19 @@ window.__ModuleLoader__.load({
 
       function imageUrl() { return state.imageUrl || DEFAULT_IMAGE; }
 
+      // 强制恢复"标准圆角"。背景：新版 DSH 的样式表给元素设了
+      // corner-shape: superellipse(1.5)（超椭圆 / "圆角方形"）。它不改变 border-radius 的
+      // 计算值，只改变渲染形状 —— 于是 border-radius:50% 的拖尾点/波纹会被画成圆角方形。
+      // 该规则覆盖面广且带 !important，故这里用 inline !important（author 层最高优先级）压回。
+      // 简写与四个长写都设，兼容只实现长写的浏览器。
+      function forceRoundCorners(el) {
+        var props = ["corner-shape",
+          "corner-top-left-shape", "corner-top-right-shape",
+          "corner-bottom-left-shape", "corner-bottom-right-shape"];
+        for (var i = 0; i < props.length; i++) {
+          try { el.style.setProperty(props[i], "round", "important"); } catch (e) {}
+        }
+      }
       function makeTrailDot(x, y) {
         var el = document.createElement("div");
         el.className = "dsh-cursor-dot";
@@ -400,6 +413,7 @@ window.__ModuleLoader__.load({
           + "width:" + s0 + "px;height:" + s0 + "px;background:" + state.trailColor + ";box-shadow:0 0 10px " + state.trailColor + ";"
           + "transform:translate3d(" + x + "px," + y + "px,0) translate(-50%,-50%) scale(1);";
         el.setAttribute("data-dsh-cursor-layer", "");
+        forceRoundCorners(el);
         document.body.appendChild(el);
         return el;
       }
@@ -409,6 +423,7 @@ window.__ModuleLoader__.load({
         // 同理：创建时就落到点击点，避免先在左上角闪一帧
         el.style.cssText = "position:fixed;left:" + x + "px;top:" + y + "px;pointer-events:none;z-index:2147482998;border-radius:50%;border:" + state.rippleBorderWidth + "px solid " + state.rippleColor + ";";
         el.setAttribute("data-dsh-cursor-layer", "");
+        forceRoundCorners(el);
         document.body.appendChild(el);
         return el;
       }
