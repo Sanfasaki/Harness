@@ -125,3 +125,36 @@ PAT 需要 `repo`（或 fine-grained 的 Contents: Read and write）权限。
   **不要**写进仓库文件、`.git/config`、文档或 commit message。
 - 提交前可用 `grep -rl "ghp_" .git/ .` 自查是否意外落盘。
 - 令牌一旦出现在对话记录、截图或第三方系统里，应立刻到 GitHub 吊销重发。
+
+## 6. Windows 本机：PowerShell 版 API 通道（2026-10-10 建立并实测）
+
+本机（Windows）到 github.com 的 **git-over-HTTPS 完全不通**，两条 TLS 后端都试过：
+
+| 尝试 | 结果 |
+|---|---|
+| schannel + 代理 `127.0.0.1:7897` | `schannel: server closed abruptly (missing close_notify)` |
+| schannel 直连 | `schannel: failed to receive handshake, SSL/TLS connection failed` |
+| openssl + 代理 / openssl 直连 | `TLS connect error: error:0A000126:SSL routines::unexpected eof while reading` |
+
+但 **api.github.com 通**（`gh api rate_limit` 正常返回），`gh` 已登录（`gho_` 令牌，scope 含 `repo`）。
+所以本机推送走 `scripts/push-via-api.ps1` —— `git-push.sh` 的 API 兜底通道的 PowerShell 版。
+
+```powershell
+# 默认推当前 HEAD（要求远端 tip 正好是本地 HEAD 的父提交）
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-via-api.ps1
+# 指定仓库/分支
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-via-api.ps1 -RepoPath C:\path\to\Harness -Branch main
+```
+
+它和 `git-push.sh` 的关键差别，也是它**推完不需要 fetch 对齐**的原因：
+
+- **blob 上传前按 git 的归一化规则处理**：本机 `core.autocrlf=true`（索引存 LF、工作区是 CRLF），
+  直接上传工作区原始字节会造出一棵**不同的 tree**（第一版脚本就是这样失败的）。
+  上传后拿 GitHub 返回的 blob SHA 与本地 `HEAD:<path>` 的 SHA **逐一比对**，不一致立刻失败。
+- **commit 用本地那份的身份/日期/message 原样重建**（message 从 `git cat-file commit` **按字节**取出，
+  不走 PowerShell 文本管道），所以 API 造出的 commit SHA 与本地**完全相同**：
+  实测 `a48446a…` 本地与远端一致，`git status` 干净、无分叉。
+- 万一 SHA 仍不同：**不篡改本地 ref**，只写 `.git/DSH_DIVERGED`（与 `git-push.sh` 同一约定）。
+
+前提与限制：`gh` 已登录且远端 tip 是本地 HEAD 的父提交（**一次推一个提交**）；
+多个提交请先合并，或分次推。
