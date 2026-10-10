@@ -25,7 +25,7 @@
 `computer-use`、`computer-use-cua-driver-native`、`browser-use`、`browser-use-playwright-mcp`、
 `dsh-skin`、`dsh-cursor`（后两条是美化），另有一层是 0.2 从 `settings.yaml` 导入的「用户层」。
 
-## 2. 启动命令（两个坑都实测踩过）
+## 2. 启动命令（三个坑都实测踩过）
 
 ```
 "C:\Program Files\nodejs\node.exe" --expose-internals ^
@@ -39,6 +39,26 @@
    `error: too many arguments. Expected 0 arguments but got 1: web.` 退出。
    0.2 的 `--profile <name>` 本身就是"启动该 profile 的应用"；
    `dsh web` / `dsh tui` 只在用内置同名 profile 时成立。`--profile` 是**全局参数**，位置在子命令之前。
+
+3. **`.bat` 必须纯 ASCII**（2026-10-10 实测炸过）：cmd.exe 按 **OEM 代码页**（本机 GBK）读批处理，
+   UTF-8 的中文注释会被拆成乱码、甚至**被当成命令执行** —— 报错形如
+   `'profile' is not recognized`、`'-web.bat。' is not recognized`。
+   中文说明写进 `.md`，`C:\AIART\*.bat` 全部保持 ASCII。
+   同理 `.ps1` 里的中文要带 **UTF-8 BOM**（否则 PowerShell 5.1 也按 GBK 解码，中文全乱）。
+   另外一个同源坑：`echo` 里不要出现 `|` `&` `<` `>` `(` `)`，cmd 会当操作符 ——
+   `echo [*] ... | profile web2 | port 3080` 会被真的执行成命令。
+
+### 一键重启
+
+```bat
+C:\AIART\restart-dsh-web.bat            REM 结束占用 3080 的旧进程 -> 等端口释放 -> 起新版
+C:\AIART\restart-dsh-web.bat 3083       REM 换端口（可在不动 3080 的前提下试跑）
+```
+
+配套 `restart-dsh-web.ps1` 负责"找进程 + 结束 + 等端口真正空闲"（10 秒不够就强制）。
+**重启会断掉正在使用的 GUI 页面**（宿主进程被杀），会话历史在磁盘上不会丢；
+新 token 每次启动都变，重启后要把新地址复制到浏览器。
+不想用脚本就手工两步：关掉旧 DSH 控制台窗口 → 双击 `start-dsh-web.bat`。
 
 其它有用的调用：
 
