@@ -314,6 +314,18 @@ profile **`web2`**，端口仍是 3080、会话沿用；老 profile `web` 原封
 
 ## 7. 文档地图
 
+> **本机这条主线是"两棒接力"，不是三件独立的事**（都围绕 DSH 0.2 带来的
+> **computer-use / browser-use** 两个能力）：
+>
+> - **第一棒（2026-10-10）**：本机从 DSH 0.1.5 升到 **0.2.0-rc.2**、新建 profile `web2`、
+>   把 computer-use / browser-use 挂进去、**美化插件针对 0.2 重新标定选择器**（见 §0.2 迁移、§1.1、§2）。
+> - **第二棒（2026-10-12）**：把这两个能力**补齐**（开 `tools.mode: both`，否则 computer-use
+>   拿不到元素句柄、只能用一半）→ **远程化**（企微桥，能离开电脑指挥）→ **成本可控**
+>   （免费↔付费模型切换）→ **换通道**（Unity MCP：结构化为主、computer-use 打辅助）→
+>   **可控化**（文件沙箱边界、网络环境、项目隔离）。
+>
+> 顺着这个顺序读下面的地图，每份文档的作用才不会看着莫名其妙。
+
 | 文件 | 内容 |
 |---|---|
 | `docs/WINDOWS-LOCAL.md` | **本机（Windows）主线：DSH 0.2 + profile `web2` 布局、两个新能力的安装与验收、回退** |
@@ -327,7 +339,7 @@ profile **`web2`**，端口仍是 3080、会话沿用；老 profile `web` 原封
 | `dsh-workspace/state-snapshots/` | 可恢复快照：光标预设+关联、主题预设摘要 |
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 256m 请求体上限修复） |
 | `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表、Windows API 通道、**§2.1 混用机身份约定**） |
-| `docs/WECOM-BRIDGE.md` | **企微 ⇄ DSH 远程桥**：ACP 协议 8 个实战坑、企微流式 10 分钟上限、DSH patch 语义与两个静默坑、模型切换（方向不对称）、Unity MCP 接线与隔离、本机环境画像、反向教训 |
+| `docs/WECOM-BRIDGE.md` | **企微 ⇄ DSH 远程桥（能力线第二棒）**：整体说明（能干什么）→ 前置条件 → **可照抄的接线步骤** → 验收清单 → **症状→处置故障表** → 已知边界。**不含推导史** |
 | `scripts/push-via-api.ps1` | **Windows 推送脚本**（本机 git-over-HTTPS 不通，改走 Git Data API；见 `docs/GIT-PUSH.md` §6） |
 | `agents/` | workspace 指令（AGENTS.md）部署源：让**其他对话自动读到约定**，见 §8.2 |
 | `scripts/measure-theme-switch.cjs` | 无头 Chrome 实测：过渡窗口时长（可靠）/ 掉帧 A/B（沙箱无 GPU，仅参考）/ 截图验收 |

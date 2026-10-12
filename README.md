@@ -36,6 +36,27 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 | `skill/` | Skill 文档：光标效果三件套 + DSH 外观个性化实战经验（含所有踩坑） |
 | `dsh-workspace/` | 开发工作区：DSH 机制文档、插件源码、bundles/patches 模板、脚本 |
 
+## ⚠️ 升级注意（**2026-10-10 之前拿过本仓库插件的，请重拉一次**）
+
+DSH **0.2** 改了内部 CSS-module 的 class 名，而**旧版插件里写死的是 0.1.5 的名字**。
+后果：**插件显示在线，但壁纸/气泡不生效，而且不报错** —— 属于最难查的那类问题。
+
+| 槽位 | 0.1.5 的 class | 0.2 的 class |
+|---|---|---|
+| 输出列 | `.EvIC1a_column` | `.Md3f7G_column` |
+| 气泡 | `.Sixlwa_bubble` | `.gdEzaW_bubble` |
+| 视频气泡目标 | `.Sixlwa_bubble` | `.gdEzaW_bubble` |
+
+**要做什么：重新拉取最新版即可，不用改代码。**
+现版把**新旧 class 名并列**写在选择器里（见 `vendor/dsh-skin/lib/client.js` 的 `SLOT_SELECTORS`），
+**0.1.5 与 0.2 都通吃**。（`wallpaper` / `sidebar` / `chat` / `input` 四个槽位 0.2 没变，不受影响。）
+
+拉完记得**硬刷新浏览器** —— 客户端 bundle 带内容哈希且是 immutable 缓存，不硬刷看不到变化。
+
+> 若你同时**把 DSH 从 0.1.5 升到 0.2**，还有两件事要一起办（详见 `docs/WINDOWS-LOCAL.md`）：
+> 0.2 首次启动会把 `$DSH_HOME/settings.yaml` 导入并改名、把 `$DSH_HOME/skills` 转成 Junction。
+> 稳妥做法是**新建一个 profile**（本机用 `web2`）而不是就地改老 profile —— 老 profile 一字不动，随时可回退。
+
 ## 功能速览
 
 - **dsh-skin**：5 槽位图片/GIF/视频换肤（各自独立不透明度）、命名预设持久化、

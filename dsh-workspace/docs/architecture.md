@@ -64,6 +64,20 @@ bundle 就是一个 npm 包，在 `package.json` 里声明自己的 patch：
 
 - **禁用某行**：`disabled: true`，支持 `!!js` 表达式按环境计算（如 `disabled: !!js (() => process.env.NODE_ENV === 'production')()`）。
 
+### ⚠️ 两个**静默**坑（2026-10-12 实测：不报错、最难查）
+
+- **新增一行必须放进 `insert:`**。把一行 `id` + `name` 直接写在**顶层**，会被当成
+  "按 id 覆盖一个**不存在**的行" → **警告后跳过**：DSH 照常启动、日志看着也干净，
+  **只是那些插件/工具根本没挂上**。症状是"配置明明写了，却什么都没有"。
+- **覆盖已有行时不要写 `name`**。写了就变成**名字断言**，与实际名字不符时**静默跳过**该补丁。
+  定位只用 `id` 就够。
+- **顺序有意义**：补丁按数组顺序应用。要覆盖某一行，那一行必须**先被 insert 出来**
+  （或已存在于 bundle 里）—— 所以"先 `insert`、后覆盖"是必须的写法。
+
+**排查手段**：`node <bin.js> --profile <名> --dump-config`
+打印**组合后的最终条目表**，并逐行标注**被哪个文件打过补丁**（`# == 来源, patched by …`）。
+"我改了为什么没生效"基本都能在这一步看出来。
+
 ## 插件
 
 插件是 Cordis 插件：`export { name, inject, apply }`。`apply(ctx, config)` 里用 `ctx.effect` / `ctx.on` 注册生命周期行为，`ctx.logger` 打日志；需要的服务在 `inject` 数组里声明（如 `commands`、`compaction`、`session`）。
