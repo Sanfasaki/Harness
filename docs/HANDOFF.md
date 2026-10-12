@@ -326,7 +326,8 @@ profile **`web2`**，端口仍是 3080、会话沿用；老 profile `web` 原封
 | `assets/theme-wallpapers/` | 三套主题壁纸（fulilian/Violet/lxhzj） |
 | `dsh-workspace/state-snapshots/` | 可恢复快照：光标预设+关联、主题预设摘要 |
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 256m 请求体上限修复） |
-| `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表、Windows API 通道） |
+| `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表、Windows API 通道、**§2.1 混用机身份约定**） |
+| `docs/WECOM-BRIDGE.md` | **企微 ⇄ DSH 远程桥**：ACP 协议 8 个实战坑、企微流式 10 分钟上限、DSH patch 语义与两个静默坑、模型切换（方向不对称）、Unity MCP 接线与隔离、本机环境画像、反向教训 |
 | `scripts/push-via-api.ps1` | **Windows 推送脚本**（本机 git-over-HTTPS 不通，改走 Git Data API；见 `docs/GIT-PUSH.md` §6） |
 | `agents/` | workspace 指令（AGENTS.md）部署源：让**其他对话自动读到约定**，见 §8.2 |
 | `scripts/measure-theme-switch.cjs` | 无头 Chrome 实测：过渡窗口时长（可靠）/ 掉帧 A/B（沙箱无 GPU，仅参考）/ 截图验收 |

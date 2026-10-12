@@ -160,3 +160,46 @@ Copy-Item "C:\Users\30391\.dsh-backup-20261010\settings.yaml" "C:\Users\30391\.d
 
 参考：上游文档 `computer-use.zh.md` / `browser-use.zh.md` / `web-server.zh.md`（本次调研时下载到
 `C:\AIART\_downloads\`）。
+
+## 8. 本机网络环境：两个会**静默**坑死你的点（2026-10-12 实测）
+
+### 8.1 `HTTP_PROXY` / `NO_PROXY` 环境变量是**坏的** —— 直连反而正常
+
+本机是 **Clash 类 TUN + fake-ip**（`198.18.0.0/15`），应用 `com.vortex.helper`，
+端口 7890/7891/7892/7897。流量本来就**透明**走代理，**不需要**设代理变量。
+
+而这些变量存在且**格式是坏的**（`NO_PROXY` 里的 `[::1]` 让 httpx 直接报
+`InvalidURL: Invalid port ':1]'`）。实测对照：
+
+| 写法 | 结果 |
+|---|---|
+| `httpx(trust_env=True)`（默认，吃环境变量） | ❌ `InvalidURL` —— 所有请求失败 |
+| `httpx(trust_env=False)`（直连） | ✅ 正常 |
+| `pip install --proxy http://127.0.0.1:7897 …` | ❌ **空转 5 分钟、占满单核、最后失败** |
+| 清掉变量后同样的 `uvx --from …` | ✅ **1.43 秒**装完 72 个包 |
+
+**结论：本机所有工具（python / pip / uv / uvx / httpx）一律直连，不要用代理变量。**
+给子进程显式清掉最保险：
+```powershell
+$env:HTTP_PROXY=''; $env:HTTPS_PROXY=''; $env:NO_PROXY=''
+```
+
+### 8.2 通 / 不通（直连实测）
+
+| ✅ 通 | ❌ 不通 |
+|---|---|
+| github.com / api.github.com / raw.githubusercontent.com / codeload | **`*.myqcloud.com`（腾讯 COS）** |
+| pypi.org / registry.npmjs.org / **packages.unity.com** | gameres.com |
+| baidu / qyapi.weixin / openws.work.weixin / wwcdn.weixin | |
+| wikipedia / zh.wikipedia | |
+
+**COS 不通并非"IP 被墙"**：三个 COS 域名都解析到 `198.18.x.x`（fake-ip），
+同段的 `wwcdn.weixin.qq.com` **TLS 正常**、COS **TLS 超时**
+⇒ 是**代理的分流规则 / 节点问题**，改一条规则可能就修好。
+**这直接决定"企微收到的图片和文件能不能落盘"**（详见 `docs/WECOM-BRIDGE.md` §2.4）。
+
+### 8.3 git-over-HTTPS 现在**是通的**（与 `GIT-PUSH.md` §6 的结论相反）
+
+`GIT-PUSH.md` §6（2026-10-10）记录"本机 git-over-HTTPS 完全不通、只能走 API 通道"。
+2026-10-12 复测：`git ls-remote origin HEAD` 与 `git push --dry-run origin main` **都成功**。
+⇒ **先试标准 git 通道**，失败再走 `push-via-api.ps1`。

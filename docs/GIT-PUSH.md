@@ -90,7 +90,50 @@ git reset --hard FETCH_HEAD && rm -f .git/DSH_DIVERGED
 令牌另存一份在 `/root/.dsh/github-token`（600），供 API 通道脚本读取
 （脚本也接受环境变量 `GITHUB_TOKEN`，优先级最高）。
 
+### 2.1 ⚠️ 混用机（工作 + 个人同一台）的身份约定 —— **别照搬 §3**
+
+上面那张表是给**沙箱 / 纯个人机**用的。**在"工作 + 个人混用"的机器上照搬会出事**：
+
+- 混用机的**全局** `user.name`/`user.email` 必须是**公司身份**（工作仓库靠它署名）。
+  若按 §3 把全局改成 `Sanfasaki`，**所有工作提交都会被署成个人身份** —— 比反过来更严重。
+- **个人仓库一律用仓库级（local）覆盖，不动全局**：
+
+```bash
+# 新 clone 一个个人仓库后，第一件事就是设这两条
+git -C <仓库路径> config user.name  Sanfasaki
+git -C <仓库路径> config user.email Sanfasaki@users.noreply.github.com   # GitHub noreply，不暴露真实邮箱
+```
+
+**为什么这事危险**：仓库级覆盖是**纯人工约定**，漏设**不会报错** ——
+`git commit` 照常成功、`git push` 照常成功，**只有署名是错的**，往往推到远端才发现。
+
+> 2026-10-12 在本机（Windows 混用机）审计，发现**两个个人仓库正在继承公司身份**：
+> `C:\AIART`、`C:\AIART\_downloads\Sanfasaki-Harness`（都无 local 身份）。
+> 其中 `C:\AIART` 当时还有 10 个未提交文件 —— 随时可能产生一个署着公司邮箱的个人提交。
+
+**根治（可选，推荐）**：用 `includeIf` 让**目录**决定身份，不再依赖"记得设"：
+
+```ini
+# ~/.gitconfig —— 按目录挂载个人身份；个人根目录之外仍走全局（公司）身份
+[includeIf "gitdir/i:C:/AIART/**"]
+	path = ~/.gitconfig-personal
+```
+```ini
+# ~/.gitconfig-personal
+[user]
+	name = Sanfasaki
+	email = Sanfasaki@users.noreply.github.com
+```
+
+**审计方法**（可脚本化）：遍历含 `.git` 的目录，把
+`git config --get user.email` 与 `git remote get-url origin` 交叉判定 ——
+"个人远程 + 公司邮箱" 或 "工作远程 + 个人署名" 都是错配。
+（本机 2026-10-12 扫出 4 个仓库、2 个风险项，修复后复扫为 0。）
+
 ## 3. 换机器 / 新环境怎么复现
+
+> ⚠️ **本节是"纯个人机 / 沙箱"的复现步骤**（把**全局**身份设成 `Sanfasaki`）。
+> **工作+个人混用的机器不要照做** —— 见 §2.1。
 
 ```bash
 git config --global user.name  "Sanfasaki"
@@ -158,3 +201,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-via-api.ps1 -Re
 
 前提与限制：`gh` 已登录且远端 tip 是本地 HEAD 的父提交（**一次推一个提交**）；
 多个提交请先合并，或分次推。
+
+> **2026-10-12 复测：本节结论现在不成立了。**
+> 在同一个克隆上实测 `git ls-remote origin HEAD` 与 `git push --dry-run origin main`
+> **都成功**（返回真实 sha / "Everything up-to-date"），即 **git-over-HTTPS 现在是通的**。
+> 10-10 当时不通，可能与沙箱链路或代理环境变量有关（见 §2.1 同批发现的环境问题）。
+>
+> **结论：先试标准 git 通道（§0 的 `git sync`），失败了再走 API** ——
+> 不要因为本节而默认直接上 `push-via-api.ps1`（API 通道有"一次只推一个提交"的限制，
+> 且会带来 sha 分叉需要自愈）。
