@@ -12,6 +12,7 @@ lib/
 !vendor/dsh-skin/lib/
 !vendor/dsh-cursor/lib/
 !dsh-workspace/plugins/dsh-cursor/lib/
+!music/dsh-netease/lib/
 
 # 部署备份
 *.bak

@@ -3,6 +3,10 @@
 DeepSeek Harness（DSH）Web GUI 的外观个性化仓库：**主题皮肤 + 光标美化三件套 +
 一键部署 + Skill 沉淀**。
 
+除外观外还有几条能力线：**computer-use / browser-use**（`docs/WINDOWS-LOCAL.md` §3）、
+**企微远程桥**（`docs/WECOM-BRIDGE.md`）、**网易云音乐接入**（`music/`：18 个 MCP 工具 +
+卡片（播放时显示专辑封面）+ 歌词/播放控制/音量）。每条线的划分见 [docs/README.md](./docs/README.md)。
+
 ## 快速开始（5 分钟）
 
 ```sh
@@ -34,6 +38,7 @@ systemctl restart dsh.service   # 或按你的方式重启 web profile
 | `dsh-workspace/state-snapshots/` | 可恢复的配置快照：光标预设+主题关联、主题预设摘要 |
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 `client_max_body_size 256m` 关键修复） |
 | `cursor-components/` | 三件套 React 组件（CustomCursor / CursorTrail / ClickRipple），可移植到任意项目 |
+| `music/` | **网易云音乐接入**：18 个 `mcp__netease__*` 工具 + 右下角卡片（播放时变专辑封面）+ 右上角歌词/播放控制/**音量**；自带 `install.ps1`、客户端冒烟测试、排错表与 2MB 上限的磁盘缓存。**歌词与控制仅 Windows**，其余平台自动降级为只有卡片 |
 | `skill/` | Skill 文档：光标效果三件套 + DSH 外观个性化实战经验（含所有踩坑） |
 | `dsh-workspace/` | 开发工作区：DSH 机制文档、插件源码、bundles/patches 模板、脚本 |
 

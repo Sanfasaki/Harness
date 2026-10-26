@@ -1,5 +1,10 @@
 # DSH 外观个性化 · 部署指南
 
+> **另有一条独立能力线 music/**（网易云音乐：18 个 MCP 工具 + 卡片 + 歌词/音量/专辑封面，
+> 两个本地服务 3456/3457，不走 cordis 插件树）。它有自己的安装脚本与文档：
+> 见 [music/README.md](../music/README.md)，install.ps1 一条命令即可。
+
+
 > 目标：让任何一台已运行 DeepSeek Harness（web profile）的机器，**照本文档即可复刻**
 > 本仓库的全部外观个性化：主题皮肤（dsh-skin）+ 光标美化三件套（dsh-cursor）+ 壁纸过渡。
 > 全程约 5 分钟。**最快路径：直接跑 `./install.sh`**，然后看第 4、5 节收尾。

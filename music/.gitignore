@@ -1,0 +1,20 @@
+# 凭据：绝不入库
+.env
+
+# 运行态产物
+*.log
+smtc-state.json
+smtc-state.json.tmp
+volume-state.json
+volume-cmd.json
+cache.json
+cache.json.tmp
+cache.json.bad
+__pycache__/
+*.pyc
+
+# 自检脚本产生的临时物
+probe/*.tmp
+# take_cookies.py 生成的 Playwright storageState（含 MUSIC_U，绝不能入库）
+auth.json
+auth.json.bak

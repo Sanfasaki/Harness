@@ -1,0 +1,22 @@
+{
+  "name": "dsh-netease",
+  "version": "0.1.0",
+  "description": "DSH 网易云音乐卡片：每日推荐 / 最近在听 / 搜歌（宿主路由 + 客户端面板）",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "license": "MIT"
+}

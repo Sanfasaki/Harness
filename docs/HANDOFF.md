@@ -172,6 +172,47 @@ profile **`web2`**，端口仍是 3080、会话沿用；老 profile `web` 原封
 - **修法**（版本无关、对注入免疫）：建元素时用**内联 `!important`** 把 `corner-shape` 及四个长写属性
   钉成 `round` —— `dsh-cursor` 里的 `forceRoundCorners()`，在 `makeTrailDot()` / `makeRippleEl()` 调用。
 
+### 网易云音乐（`music/`，**不走 cordis 插件树**，2026-10-22）
+
+- **三个进程**：`server.py` → `127.0.0.1:3456`（18 个 `mcp__netease__*` 工具；第三方 MIT 项目，
+  本地只把监听从 `0.0.0.0` 改成 loopback，上游版本锚点 `VERSION = "3.2.1"`）；`bridge.py` → `127.0.0.1:3457`（界面数据桥）；
+  `keepalive.py` 只守护这两个 Python 进程（客户端插件是浏览器里的 bundle，不是进程）。
+- **为什么必须守护**：DSH 重启会把这两个服务带走，而 `dsh-mcp-client` 对首个连接失败**不重试**、
+  断线重连也只有约 10 次预算 —— 预算耗尽后工具**静默消失且 DSH 不报错**。
+  登录自启：`music/register-autostart.ps1`（只建一个 `dsh-netease-keepalive.lnk`）。
+- **宿主侧故意为空**：`music/dsh-netease/lib/index.js` 不注册任何路由。原因见 §2 的 0.2 迁移经验——
+  宿主 JS 改了必须重启 DSH（Node 模块缓存，换 mount 仍调到旧 `apply`），所以数据层全在 `bridge.py`，
+  改中继只需重启它自己，改前端只需硬刷新。
+- **平台边界**：工具与卡片三平台可用；**歌词与播放控制仅 Windows**（依赖 SMTC + PowerShell 5.1）。
+  其他平台 `/now` 返回 `smtc-unsupported`，界面自动隐藏那一块（不是报错）。
+- **凭据**：`music/.env` 的 `NETEASE_COOKIE`，已 gitignore；仓库内只有 `.env.example`。
+  - **点歌 / 音量 / 封面（2026-10-26）**：
+    - 点歌走 `bridge /open?song=<id>` → 主机侧 `os.startfile("orpheus://…")` 唤起**桌面客户端**
+      （协议未注册才退回网页）；不在浏览器里跳 `orpheus://`，那样会被拦或弹确认框。
+    - 音量是**常驻助手**（`volume.ps1 -Action daemon`，Core Audio/WASAPI，C# 只编译一次）：
+      一次性调用每次都要 `Add-Type` 重编译，实测 **713ms/次**，拖动一顿一顿；常驻后 **读 26ms / 写 3–18ms**。
+      界面是控制行里一个小喇叭按钮，点开**纵向滑轨**。
+    - 右下角按钮**播放时换成专辑封面**，停下还原成音符图标。
+  - **两个坑（细节在 `music/README.md`）**：
+    - 客户端 SMTC 上报的 `endMs` **恒为 0**（浏览器才有），前端拿不到总时长就不画进度条；
+      要用 `/api/song/detail` 的时长补，且该接口字段叫 `duration`（新接口才叫 `dt`）。
+    - 歌名搜索被**翻奏版淹没**（搜「晴天 周杰伦」前 10 条没有一条是周杰伦本人），
+      按歌名取第一条会贴错专辑封面；现在**先用「我的歌单」索引**（playlist detail 里每首歌自带
+      `al.picUrl`，实测与卡片弹窗里的封面 31/31 一致）、其次是**播放记录**（`/api/v1/play/record`，
+      你实际播放过的歌，实测 249 首，专治"官方版不在搜索结果里"），
+      不在库里才退回搜索（「歌名精确+歌手对」优先、不可信时**按歌手再搜一遍**），
+      封面照给（宁可偶尔错也不整片空）。
+  - **限流与缓存（代价换来的经验）**：
+    - 密集请求会触发 `code=405`，且**只限某个端点**：`/api/search/get` 被限时
+      `/api/search/get/web`、`/api/cloudsearch/pc` 仍可用。所以搜索做了**多入口回退**，
+      冷静也改成**按端点**——曾经的全局冷静把仅有的可用通道一起封了，导致歌词全空。
+    - `cache.json` 落盘解析结果（songId / 歌词 / 歌手曲库）：**硬上限 2MB**、写入按 8 秒节流、
+      连续失败 3 次熔断 10 分钟、坏文件只隔离一次。别再写「每次请求都存盘」的缓存。
+- **改前端必跑**：`node music/dsh-netease/test/client-smoke.cjs`（最小 DOM 桩真执行 bundle；
+  已做变异验证：注入真 bug 会失败 3 项）。
+- **`.gitignore` 依赖**：全局 `lib/` 规则会吞掉插件代码，所以根 `.gitignore` 必须有
+  `!music/dsh-netease/lib/`。**以后新增任何带 `lib/` 的插件都要照办**，否则代码静默不入库。
+
 ## 3. 模型与会话
 
 - `/root/.dsh/settings.yaml` → `agent-default-model.model = deepseek-flash`（2026-09-10 写入，服务 09-14 重启后已加载）。
@@ -343,6 +384,8 @@ profile **`web2`**，端口仍是 3080、会话沿用；老 profile `web` 原封
 | `docs/nginx-dsh.conf` | nginx 站点配置参考（含 256m 请求体上限修复） |
 | `docs/GIT-PUSH.md` | **推送仓库内容指南**（双通道 push、全局 git 配置、换机复现、排错表、Windows API 通道、**§2.1 混用机身份约定**） |
 | `docs/WECOM-BRIDGE.md` | **企微 ⇄ DSH 远程桥（能力线第二棒）**：整体说明（能干什么）→ 前置条件 → **可照抄的接线步骤** → 验收清单 → **症状→处置故障表** → 已知边界。**不含推导史** |
+| `music/README.md` | **网易云音乐接入**：架构、安装、cookie 取法、验证、8 个坑、三路封面来源、非 Windows 的 MPRIS 适配点 |
+| `music/dsh-netease/test/client-smoke.cjs` | 网易云客户端冒烟测试：最小 DOM 桩真执行 bundle（改前端必跑） |
 | `scripts/push-via-api.ps1` | **Windows 推送脚本**（本机 git-over-HTTPS 不通，改走 Git Data API；见 `docs/GIT-PUSH.md` §6） |
 | `agents/` | workspace 指令（AGENTS.md）部署源：让**其他对话自动读到约定**，见 §8.2 |
 | `scripts/measure-theme-switch.cjs` | 无头 Chrome 实测：过渡窗口时长（可靠）/ 掉帧 A/B（沙箱无 GPU，仅参考）/ 截图验收 |

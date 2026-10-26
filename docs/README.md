@@ -14,6 +14,7 @@
 | ③ **两个新能力：computer-use / browser-use** | 让 DSH 能操作本机桌面与浏览器 | 已装上；**使用知识待整理** ⚠️ |
 | ④ **企微 ⇄ DSH 远程桥** | 用手机企微远程指挥本机 DSH（含 Unity MCP 接入） | 已可用（2026-10-13） |
 | ⑤ **工程设施** | 推送双通道、混用机 git 身份约定 | 已完成 |
+| ⑥ **网易云音乐接入** | `music/`：18 个 MCP 工具 + 卡片 + 歌词/播放控制 + **音量/专辑封面**；两个本地服务 `:3456`(MCP) / `:3457`(GUI 桥)，由 `keepalive.py` 守护 | 已可用（2026-10-26） |
 
 > **①③④ 是同一条能力线的接力**：①③ 是 2026-10-10 的"装上 + 适配"；
 > ④ 是 10-12/13 的拓展（补齐 computer-use 的元素句柄 → 远程化 → 成本可控 → 可控化）。
@@ -32,6 +33,7 @@
 | 改皮肤 / 光标 / 主题壁纸 | `README.md`（**含升级注意**）、`dsh-workspace/docs/appearance.md`、`skill/dsh-appearance-personalization-skill.md` |
 | **写 / 改 DSH 插件或 patch** | `dsh-workspace/docs/architecture.md`（分层 / bundle / **patch 的两个静默坑**）、`dsh-workspace/docs/plugin-development.md` |
 | **用企微远程指挥 DSH** | `docs/WECOM-BRIDGE.md` |
+| **让 DSH 查/放我的网易云** | `music/README.md`（含平台边界、cookie 取法、**8 个已知坑**、非 Windows 的 MPRIS 适配点） |
 | 往仓库推东西 / 换机器配凭据 | `docs/GIT-PUSH.md`（含 **§2.1 混用机身份约定**） |
 | 看整体现状与"上次做到哪" | `docs/HANDOFF.md`（**事实来源**） |
 
@@ -53,7 +55,7 @@
 **计划**：抽出 `docs/COMPUTER-USE.md`（装 → 用 → 边界），从桥文档移走并留指针。
 **在那之前，先查 `docs/WECOM-BRIDGE.md` 的 §3.2 / §3.5 / §3.6。**
 
-### 2. `docs/HANDOFF.md`（33KB）什么都装
+### 2. `docs/HANDOFF.md`（约 37KB）什么都装
 
 它应该只做"事实来源 + 指针"，细节指向各专章。目前与 `WINDOWS-LOCAL.md`、`WECOM-BRIDGE.md` 有重叠。
 
